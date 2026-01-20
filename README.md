@@ -18,12 +18,10 @@ This project provides an alternative MCP server that works with **Jira Server 8.
 Based on [@aot-tech/jira-mcp-server](https://www.npmjs.com/package/@aot-tech/jira-mcp-server) v1.0.9.
 
 **Key modifications:**
-- Enabled issue operation tools that were commented out:
-  - `jira_search_issues` - JQL search
-  - `jira_create_issue` - Create issues
-  - `jira_update_issue` - Update issues
-  - `jira_add_comment` - Add comments
-- Fixed parameter passing in `createIssueTool` handler
+- Enabled issue operation tools that were commented out
+- Fixed authentication bug: services now correctly use Basic Auth for Jira Server
+- Fixed empty response handling for update/delete/assign operations (Jira Server returns 204)
+- Added integration tests with Vitest
 
 ## Supported Tools
 
@@ -33,7 +31,9 @@ Based on [@aot-tech/jira-mcp-server](https://www.npmjs.com/package/@aot-tech/jir
 | `jira_search_issues` | Search issues via JQL |
 | `jira_create_issue` | Create new issue |
 | `jira_update_issue` | Update existing issue |
+| `jira_assign_issue` | Assign issue to user |
 | `jira_add_comment` | Add comment to issue |
+| `jira_delete_issue` | Delete issue |
 | `jira_get_all_projects` | List all projects |
 | `jira_get_project_details` | Get project details |
 | `jira_get_project_users` | Get project members |
@@ -93,6 +93,26 @@ Edit `~/.claude.json`:
     }
   }
 }
+```
+
+## Testing
+
+```bash
+# Configure test credentials
+cp tests/.env.test.example tests/.env.test
+# Edit tests/.env.test with your Jira credentials
+
+# Run tests
+npm test
+```
+
+Test configuration (`tests/.env.test`):
+```env
+JIRA_BASE_URL=http://jira.example.com:8080
+JIRA_USER_EMAIL=username
+JIRA_API_TOKEN=password
+TEST_PROJECT_KEY=MYPROJECT    # Optional
+TEST_ISSUE_KEY=MYPROJECT-1    # Optional
 ```
 
 ## Compatibility

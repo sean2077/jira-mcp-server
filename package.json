@@ -7,7 +7,9 @@
     "jira-mcp-server": "./src/index.js"
   },
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "mcp",
@@ -24,5 +26,8 @@
     "axios": "^1.8.4",
     "dotenv": "^16.5.0",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }

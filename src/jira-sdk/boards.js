@@ -9,7 +9,7 @@ class JiraBoardsService {
     requestTimeout = 30000;
     constructor(baseUrl, token, isOauth = false) {
         this.baseUrl = baseUrl;
-        this.headers = (0, api_1.createJiraApiHeaders)(token, true);
+        this.headers = (0, api_1.createJiraApiHeaders)(token, isOauth);
     }
     async handleFetchError(response) {
         if (!response.ok) {
