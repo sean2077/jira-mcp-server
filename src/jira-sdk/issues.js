@@ -113,9 +113,17 @@ class JiraIssuesService {
             .join("");
     }
     cleanIssue(issue) {
-        const description = issue.fields?.description?.content
-            ? this.extractTextContent(issue.fields.description.content)
-            : "";
+        // Handle both Jira Server (plain text) and Jira Cloud (ADF format)
+        let description = "";
+        if (issue.fields?.description) {
+            if (typeof issue.fields.description === 'string') {
+                // Jira Server API v2: plain text
+                description = issue.fields.description;
+            } else if (issue.fields.description.content) {
+                // Jira Cloud API v3: ADF format
+                description = this.extractTextContent(issue.fields.description.content);
+            }
+        }
         const cleanedIssue = {
             id: issue.id,
             key: issue.key,
@@ -247,6 +255,12 @@ class JiraIssuesService {
         });
     }
     async updateIssue(issueKey, fields) {
+        // Transform description field if present (Jira Cloud needs ADF format)
+        const transformedFields = { ...fields };
+        if (transformedFields.description !== undefined) {
+            transformedFields.description = this.createAdfFromBody(transformedFields.description);
+        }
+
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}`);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
@@ -254,7 +268,7 @@ class JiraIssuesService {
             const response = await fetch(url, {
                 method: "PUT",
                 headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify({ fields }),
+                body: JSON.stringify({ fields: transformedFields }),
                 signal: controller.signal,
             });
             clearTimeout(timeoutId);

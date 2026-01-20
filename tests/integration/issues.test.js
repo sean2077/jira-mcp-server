@@ -106,7 +106,7 @@ describe('Issues Service (Jira Server)', () => {
   });
 
   describe('updateIssue', () => {
-    it('更新Issue', async () => {
+    it('更新Issue摘要', async () => {
       if (skipIfNotConfigured()) return;
       if (!testConfig.testIssueKey) {
         console.log('跳过: 未配置 TEST_ISSUE_KEY');
@@ -130,6 +130,33 @@ describe('Issues Service (Jira Server)', () => {
         summary: original.summary,
       });
       console.log(`已恢复原始摘要`);
+    });
+
+    it('更新Issue描述', async () => {
+      if (skipIfNotConfigured()) return;
+      if (!testConfig.testIssueKey) {
+        console.log('跳过: 未配置 TEST_ISSUE_KEY');
+        return;
+      }
+
+      // 先获取原始描述
+      const original = await service.getIssueWithComments(testConfig.testIssueKey);
+      const originalDescription = original.description || '';
+      const newDescription = `测试描述更新 - ${new Date().toISOString()}\n\n原始描述：${originalDescription}`;
+
+      await service.updateIssue(testConfig.testIssueKey, {
+        description: newDescription,
+      });
+
+      const updated = await service.getIssueWithComments(testConfig.testIssueKey);
+      expect(updated.description).toContain('测试描述更新');
+      console.log(`描述已更新: ${updated.description?.substring(0, 50)}...`);
+
+      // 恢复原始描述
+      await service.updateIssue(testConfig.testIssueKey, {
+        description: originalDescription,
+      });
+      console.log(`已恢复原始描述`);
     });
   });
 
