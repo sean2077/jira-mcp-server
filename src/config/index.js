@@ -18,7 +18,7 @@ exports.config = {
         environment,
     },
     jira: {
-        baseUrl: 'https://api.atlassian.com',
+        baseUrl: process.env.JIRA_BASE_URL || 'https://api.atlassian.com',
         type: process.env.JIRA_TYPE === "server" ? "server" : "cloud",
         oauth: {
             endpoints: {
@@ -53,8 +53,14 @@ exports.config = {
     },
 };
 const getEnvironmentConfig = () => {
+    // Support both JIRA_BEARER_TOKEN and JIRA_USER_EMAIL:JIRA_API_TOKEN formats
+    let bearerToken = process.env.JIRA_BEARER_TOKEN || null;
+    if (!bearerToken && process.env.JIRA_USER_EMAIL && process.env.JIRA_API_TOKEN) {
+        // Combine email and token for Basic Auth
+        bearerToken = `${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`;
+    }
     return {
-        bearerToken: process.env.JIRA_BEARER_TOKEN || null,
+        bearerToken,
         port: exports.config.server.port,
         environment: exports.config.server.environment,
         jiraBaseUrl: exports.config.jira.baseUrl,

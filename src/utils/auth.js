@@ -132,7 +132,9 @@ async function createJiraServices(isOauth, token) {
 // Pure function to create authenticated JIRA services
 async function createAuthenticatedJiraServices() {
     const token = getBearerToken();
-    return await createJiraServices(true, token || '');
+    // Use OAuth for Cloud, Basic Auth for Server
+    const isOauth = config_1.config.jira.type !== 'server';
+    return await createJiraServices(isOauth, token || '');
 }
 // Backward compatibility - create individual service
 async function createAuthenticatedJiraService() {

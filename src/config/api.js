@@ -141,7 +141,9 @@ function createJiraApiHeaders(token, isOauth = false) {
 function getJiraApiUrl(baseUrl, endpoint) {
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
     const cleanEndpoint = endpoint.replace(/^\//, '');
-    return `${cleanBaseUrl}/rest/api/3/${cleanEndpoint}`;
+    // Use API v2 for Jira Server, v3 for Jira Cloud
+    const apiVersion = index_1.config.jira.type === 'server' ? '2' : '3';
+    return `${cleanBaseUrl}/rest/api/${apiVersion}/${cleanEndpoint}`;
 }
 function getJiraExternalApiUrl(cloudId, endpoint) {
     const cleanEndpoint = endpoint.replace(/^\//, '');

@@ -89,14 +89,20 @@ exports.createIssueTool = {
     handler: async ({ projectKey, summary, description, issueType, priority, assigneeAccountId }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            const additionalFields = {};
+            // Build params object for createIssue wrapper in auth.js
+            const params = {
+                projectKey,
+                issueType,
+                summary,
+                description,
+            };
             if (priority) {
-                additionalFields.priority = { name: priority };
+                params.priority = { name: priority };
             }
             if (assigneeAccountId) {
-                additionalFields.assignee = { name: assigneeAccountId };
+                params.assignee = { name: assigneeAccountId };
             }
-            const issue = await jiraApi.createIssue(projectKey, issueType, summary, description, additionalFields);
+            const issue = await jiraApi.createIssue(params);
             return {
                 content: [{
                         type: "text",

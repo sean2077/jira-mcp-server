@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraIssuesService = void 0;
 exports.createIssuesService = createIssuesService;
 const api_1 = require("../config/api");
+const index_1 = require("../config/index");
 const bulk_operations_1 = require("../tools/bulk-operations");
 class JiraIssuesService {
     baseUrl;
@@ -129,7 +130,8 @@ class JiraIssuesService {
         const fields = minimalFields
             ? "summary,status,created,updated,assignee,project"
             : "summary,assignee,status,created,updated,comment,description,timetracking,worklog,project";
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search/jql?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`);
+        // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`);
         (0, bulk_operations_1.debugLog)("url", url);
         const response = await this.fetchJson(url);
         (0, bulk_operations_1.debugLog)("response", response);
@@ -257,6 +259,10 @@ class JiraIssuesService {
         });
     }
     createAdfFromBody(text) {
+        // Jira Server API v2 uses plain text, Jira Cloud API v3 uses ADF
+        if (index_1.config.jira.type === 'server') {
+            return text;
+        }
         return {
             type: "doc",
             version: 1,
