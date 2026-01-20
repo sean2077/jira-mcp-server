@@ -124,10 +124,17 @@ class JiraUsersService {
         };
     }
     async searchUsers(query, maxResults = 50) {
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user/search?query=${encodeURIComponent(query)}&maxResults=${maxResults}`);
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses 'username' parameter
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user/search?username=${encodeURIComponent(query)}&maxResults=${maxResults}`);
+        } else {
+            // Jira Cloud uses 'query' parameter
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user/search?query=${encodeURIComponent(query)}&maxResults=${maxResults}`);
+        }
         const users = await this.fetchJson(url);
         return users.map((user) => ({
-            accountId: user.accountId,
+            accountId: user.accountId || user.key || user.name,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
             active: user.active !== false,

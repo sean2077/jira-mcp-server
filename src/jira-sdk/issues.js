@@ -285,9 +285,13 @@ class JiraIssuesService {
     }
     async assignIssue(issueKey, accountId) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/assignee`);
+        // Jira Server uses 'name', Jira Cloud uses 'accountId'
+        const body = index_1.config.jira.type === 'server'
+            ? { name: accountId }
+            : { accountId };
         await this.fetchJson(url, {
             method: "PUT",
-            body: JSON.stringify({ accountId }),
+            body: JSON.stringify(body),
         });
     }
     createAdfFromBody(text) {

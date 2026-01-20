@@ -97,7 +97,7 @@ class JiraProjectsService {
             description: project.description,
             lead: project.lead ? {
                 displayName: project.lead.displayName,
-                accountId: project.lead.accountId,
+                accountId: project.lead.accountId || project.lead.key || project.lead.name,
             } : undefined,
             components: project.components?.map((comp) => ({
                 id: comp.id,
@@ -151,7 +151,7 @@ class JiraProjectsService {
             description: comp.description,
             lead: comp.lead ? {
                 displayName: comp.lead.displayName,
-                accountId: comp.lead.accountId,
+                accountId: comp.lead.accountId || comp.lead.key || comp.lead.name,
             } : undefined,
             assigneeType: comp.assigneeType || "PROJECT_DEFAULT",
             isAssigneeTypeValid: comp.isAssigneeTypeValid !== false,
