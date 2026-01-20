@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraUsersService = void 0;
 exports.createUsersService = createUsersService;
 const api_1 = require("../config/api");
+const index_1 = require("../config/index");
 class JiraUsersService {
     baseUrl;
     headers;
@@ -65,19 +66,21 @@ class JiraUsersService {
     }
     async lookupJiraAccountId(cloudId, searchString, maxResults = 10) {
         const searchParams = new URLSearchParams();
-        if (searchString.includes("@")) {
-            // Search by email
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses 'username' parameter
+            searchParams.append("username", searchString);
+            searchParams.append("maxResults", maxResults.toString());
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user/search?${searchParams.toString()}`);
+        } else {
+            // Jira Cloud uses 'query' parameter
             searchParams.append("query", searchString);
+            searchParams.append("maxResults", maxResults.toString());
+            url = (0, api_1.getJiraExternalApiUrl)(cloudId, `user/search?${searchParams.toString()}`);
         }
-        else {
-            // Search by display name
-            searchParams.append("query", searchString);
-        }
-        searchParams.append("maxResults", maxResults.toString());
-        const url = (0, api_1.getJiraExternalApiUrl)(cloudId, `user/search?${searchParams.toString()}`);
         const users = await this.fetchJson(url);
         return users.map((user) => ({
-            accountId: user.accountId,
+            accountId: user.accountId || user.key || user.name,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
             accountType: user.accountType || "atlassian",
@@ -85,10 +88,17 @@ class JiraUsersService {
         }));
     }
     async getUserProfile(accountId) {
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user?accountId=${accountId}`);
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses 'username' or 'key' parameter
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user?username=${encodeURIComponent(accountId)}`);
+        } else {
+            // Jira Cloud uses 'accountId' parameter
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user?accountId=${accountId}`);
+        }
         const user = await this.fetchJson(url);
         return {
-            accountId: user.accountId,
+            accountId: user.accountId || user.key || user.name,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
             active: user.active !== false,
@@ -97,10 +107,15 @@ class JiraUsersService {
         };
     }
     async getCurrentUser(cloudId) {
-        const url = (0, api_1.getJiraExternalApiUrl)(cloudId, "myself");
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, "myself");
+        } else {
+            url = (0, api_1.getJiraExternalApiUrl)(cloudId, "myself");
+        }
         const user = await this.fetchJson(url);
         return {
-            accountId: user.accountId,
+            accountId: user.accountId || user.key || user.name,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
             active: user.active !== false,

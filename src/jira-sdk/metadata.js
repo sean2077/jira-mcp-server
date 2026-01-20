@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraMetadataService = void 0;
 exports.createMetadataService = createMetadataService;
 const api_1 = require("../config/api");
+const index_1 = require("../config/index");
 class JiraMetadataService {
     baseUrl;
     headers;
@@ -64,16 +65,23 @@ class JiraMetadataService {
         }
     }
     async getIssueTypes(projectKey, cloudId) {
-        const url = (0, api_1.getJiraExternalApiUrl)(cloudId, `issuetype?projectId=${projectKey}`);
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses /rest/api/2/issuetype or project-specific endpoint
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, 'issuetype');
+        } else {
+            // Jira Cloud uses external API with cloudId
+            url = (0, api_1.getJiraExternalApiUrl)(cloudId, `issuetype?projectId=${projectKey}`);
+        }
         console.log('url in issue types', url);
         const response = await this.fetchJson(url);
-        return response?.map((issueType) => ({
+        return (response || []).map((issueType) => ({
             id: issueType.id,
             name: issueType.name,
             description: issueType.description || '',
             subtask: issueType.subtask || false,
             iconUrl: issueType.iconUrl || '',
-        })) || [];
+        }));
     }
     async getPriorities() {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, "priority");

@@ -73,8 +73,7 @@ class JiraBoardsService {
             searchParams.append('type', type);
         }
         // Note: Using agile API endpoint for boards
-        const baseUrlForAgile = this.baseUrl.replace('/rest/api/3', '/rest/agile/1.0');
-        const url = `${baseUrlForAgile}/board?${searchParams.toString()}`;
+        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `board?${searchParams.toString()}`);
         const response = await this.fetchJson(url);
         return response.values?.map((board) => ({
             id: board.id,
@@ -90,8 +89,7 @@ class JiraBoardsService {
             searchParams.append('state', state);
         }
         // Note: Using agile API endpoint for sprints
-        const baseUrlForAgile = this.baseUrl.replace('/rest/api/3', '/rest/agile/1.0');
-        const url = `${baseUrlForAgile}/board/${boardId}/sprint?${searchParams.toString()}`;
+        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `board/${boardId}/sprint?${searchParams.toString()}`);
         const response = await this.fetchJson(url);
         return response.values?.map((sprint) => ({
             id: sprint.id,
@@ -104,8 +102,7 @@ class JiraBoardsService {
     }
     async getBoardConfiguration(boardId) {
         // Note: Using agile API endpoint for board configuration
-        const baseUrlForAgile = this.baseUrl.replace('/rest/api/3', '/rest/agile/1.0');
-        const url = `${baseUrlForAgile}/board/${boardId}/configuration`;
+        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `board/${boardId}/configuration`);
         const response = await this.fetchJson(url);
         return {
             id: response.id,
@@ -131,8 +128,7 @@ class JiraBoardsService {
         const searchParams = new URLSearchParams();
         searchParams.append('maxResults', maxResults.toString());
         // Note: Using agile API endpoint for sprint issues
-        const baseUrlForAgile = this.baseUrl.replace('/rest/api/3', '/rest/agile/1.0');
-        const url = `${baseUrlForAgile}/sprint/${sprintId}/issue?${searchParams.toString()}`;
+        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `sprint/${sprintId}/issue?${searchParams.toString()}`);
         const response = await this.fetchJson(url);
         return response.issues?.map((issue) => ({
             id: issue.id,

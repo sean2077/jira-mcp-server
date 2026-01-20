@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOLS_CONFIG = exports.SERVER_CONFIG = void 0;
 exports.createJiraApiHeaders = createJiraApiHeaders;
 exports.getJiraApiUrl = getJiraApiUrl;
+exports.getJiraAgileApiUrl = getJiraAgileApiUrl;
 exports.getJiraExternalApiUrl = getJiraExternalApiUrl;
 const index_1 = require("./index");
 // Server configuration for MCP
@@ -144,6 +145,11 @@ function getJiraApiUrl(baseUrl, endpoint) {
     // Use API v2 for Jira Server, v3 for Jira Cloud
     const apiVersion = index_1.config.jira.type === 'server' ? '2' : '3';
     return `${cleanBaseUrl}/rest/api/${apiVersion}/${cleanEndpoint}`;
+}
+function getJiraAgileApiUrl(baseUrl, endpoint) {
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const cleanEndpoint = endpoint.replace(/^\//, '');
+    return `${cleanBaseUrl}/rest/agile/1.0/${cleanEndpoint}`;
 }
 function getJiraExternalApiUrl(cloudId, endpoint) {
     const cleanEndpoint = endpoint.replace(/^\//, '');

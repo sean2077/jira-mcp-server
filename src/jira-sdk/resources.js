@@ -63,6 +63,17 @@ class JiraResourcesService {
         }
     }
     async getAccessibleAtlassianResources() {
+        // For Jira Server, cloudId is not needed - return a placeholder
+        if (config_1.config.jira.type === 'server') {
+            return [{
+                id: 'server',
+                name: 'Jira Server',
+                url: config_1.config.jira.baseUrl,
+                scopes: [],
+                avatarUrl: '',
+                note: 'Jira Server does not use cloudId. You can skip the cloudId parameter for other API calls.',
+            }];
+        }
         const url = config_1.config.jira.oauth.endpoints.accessibleResources;
         const resources = await this.fetchJson(url);
         return resources.map((resource) => ({

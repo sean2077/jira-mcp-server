@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraProjectsService = void 0;
 exports.createProjectsService = createProjectsService;
 const api_1 = require("../config/api");
+const index_1 = require("../config/index");
 class JiraProjectsService {
     baseUrl;
     headers;
@@ -64,10 +65,19 @@ class JiraProjectsService {
         }
     }
     async getProjects(cloudId, maxResults = 50) {
-        const url = (0, api_1.getJiraExternalApiUrl)(cloudId, `project/search?maxResults=${maxResults}`);
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses /rest/api/2/project endpoint
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, 'project');
+        } else {
+            // Jira Cloud uses external API with cloudId
+            url = (0, api_1.getJiraExternalApiUrl)(cloudId, `project/search?maxResults=${maxResults}`);
+        }
         console.log('url', url);
         const response = await this.fetchJson(url);
-        return response.values?.map((project) => ({
+        // Server returns array directly, Cloud returns { values: [...] }
+        const projects = Array.isArray(response) ? response : (response.values || []);
+        return projects.map((project) => ({
             id: project.id,
             key: project.key,
             name: project.name,
@@ -75,7 +85,7 @@ class JiraProjectsService {
             simplified: project.simplified || false,
             style: project.style || "classic",
             isPrivate: project.isPrivate || false,
-        })) || [];
+        }));
     }
     async getProjectDetails(projectKey) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `project/${projectKey}?expand=description,lead,issueTypes,versions,components`);
@@ -106,16 +116,27 @@ class JiraProjectsService {
         };
     }
     async getProjectUsers(cloudId, projectKey, maxResults = 100) {
-        // project key should be comma separated list of project keys
-        // is assignee of (PROJ-1, PROJ-2)
-        const params = new URLSearchParams({
-            query: `is assignee of (${projectKey})`,
-            maxResults: Math.min(maxResults, 100).toString()
-        });
-        const url = (0, api_1.getJiraExternalApiUrl)(cloudId, `user/search/query?${params}`);
-        const users = await this.fetchJson(url);
-        return users?.values?.map((user) => ({
-            accountId: user.accountId,
+        let url;
+        if (index_1.config.jira.type === 'server') {
+            // Jira Server uses assignable/search endpoint
+            const params = new URLSearchParams({
+                project: projectKey,
+                maxResults: Math.min(maxResults, 100).toString()
+            });
+            url = (0, api_1.getJiraApiUrl)(this.baseUrl, `user/assignable/search?${params}`);
+        } else {
+            // Jira Cloud uses external API with cloudId
+            const params = new URLSearchParams({
+                query: `is assignee of (${projectKey})`,
+                maxResults: Math.min(maxResults, 100).toString()
+            });
+            url = (0, api_1.getJiraExternalApiUrl)(cloudId, `user/search/query?${params}`);
+        }
+        const response = await this.fetchJson(url);
+        // Server returns array directly, Cloud returns { values: [...] }
+        const users = Array.isArray(response) ? response : (response?.values || []);
+        return users.map((user) => ({
+            accountId: user.accountId || user.key || user.name,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
             active: user.active !== false,
