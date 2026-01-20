@@ -1,0 +1,28 @@
+{
+  "name": "jira-mcp-server",
+  "version": "1.0.0",
+  "description": "Jira MCP Server - Fork of @aot-tech/jira-mcp-server with enhanced issue operations",
+  "main": "src/index.js",
+  "bin": {
+    "jira-mcp-server": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "jira",
+    "claude"
+  ],
+  "author": "sean2077",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "axios": "^1.8.4",
+    "dotenv": "^16.5.0",
+    "zod": "^3.24.2"
+  }
+}
