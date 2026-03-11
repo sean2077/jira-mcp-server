@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addCommentTool = exports.assignIssueTool = exports.deleteIssueTool = exports.updateIssueTool = exports.createIssueTool = exports.getIssueTool = exports.searchIssuesTool = void 0;
+exports.manageWatchersTool = exports.getWatchersTool = exports.addWorklogTool = exports.deleteIssueLinkTool = exports.createIssueLinkTool = exports.getIssueLinkTypesTool = exports.transitionIssueTool = exports.getTransitionsTool = exports.addCommentTool = exports.assignIssueTool = exports.deleteIssueTool = exports.updateIssueTool = exports.createIssueTool = exports.getIssueTool = exports.searchIssuesTool = void 0;
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
 const api_1 = require("../config/api");
@@ -230,6 +230,234 @@ exports.addCommentTool = {
                 content: [{
                         type: "text",
                         text: `Error adding comment to JIRA issue: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.getTransitionsTool = {
+    name: api_1.TOOLS_CONFIG.issues.getTransitions.name,
+    description: api_1.TOOLS_CONFIG.issues.getTransitions.description,
+    parameters: {
+        issueKey: zod_1.z.string().describe("JIRA issue key (e.g., 'TEST-123')")
+    },
+    handler: async ({ issueKey }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const transitions = await jiraApi.getTransitions(issueKey);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Available transitions for ${issueKey}:\n\n${JSON.stringify(transitions, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error fetching transitions for ${issueKey}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.transitionIssueTool = {
+    name: api_1.TOOLS_CONFIG.issues.transition.name,
+    description: api_1.TOOLS_CONFIG.issues.transition.description,
+    parameters: {
+        issueKey: zod_1.z.string().describe("JIRA issue key to transition (e.g., 'TEST-123')"),
+        transitionId: zod_1.z.string().describe("Transition ID to apply (get available transitions using jira_get_transitions)"),
+        comment: zod_1.z.string().optional().describe("Optional comment to add with the transition")
+    },
+    handler: async ({ issueKey, transitionId, comment }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            await jiraApi.transitionIssue(issueKey, transitionId, comment);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Issue ${issueKey} transitioned successfully with transition ID ${transitionId}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error transitioning issue ${issueKey}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.getIssueLinkTypesTool = {
+    name: api_1.TOOLS_CONFIG.issues.getLinkTypes.name,
+    description: api_1.TOOLS_CONFIG.issues.getLinkTypes.description,
+    parameters: {},
+    handler: async () => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const linkTypes = await jiraApi.getIssueLinkTypes();
+            return {
+                content: [{
+                        type: "text",
+                        text: `Available issue link types:\n\n${JSON.stringify(linkTypes, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error fetching issue link types: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.createIssueLinkTool = {
+    name: api_1.TOOLS_CONFIG.issues.createLink.name,
+    description: api_1.TOOLS_CONFIG.issues.createLink.description,
+    parameters: {
+        linkType: zod_1.z.string().describe("Link type name (e.g., 'Blocks', 'Relates', 'Duplicate') - get from jira_get_issue_link_types"),
+        inwardIssueKey: zod_1.z.string().describe("Issue key for the inward side of the link (e.g., 'TEST-1' is blocked by 'TEST-2')"),
+        outwardIssueKey: zod_1.z.string().describe("Issue key for the outward side of the link (e.g., 'TEST-2' blocks 'TEST-1')"),
+        comment: zod_1.z.string().optional().describe("Optional comment to add with the link")
+    },
+    handler: async ({ linkType, inwardIssueKey, outwardIssueKey, comment }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            await jiraApi.createIssueLink(linkType, inwardIssueKey, outwardIssueKey, comment);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Issue link created: ${inwardIssueKey} <-- ${linkType} --> ${outwardIssueKey}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error creating issue link: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.deleteIssueLinkTool = {
+    name: api_1.TOOLS_CONFIG.issues.deleteLink.name,
+    description: api_1.TOOLS_CONFIG.issues.deleteLink.description,
+    parameters: {
+        linkId: zod_1.z.string().describe("ID of the issue link to delete (visible in issue details)")
+    },
+    handler: async ({ linkId }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            await jiraApi.deleteIssueLink(linkId);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Issue link ${linkId} deleted successfully`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error deleting issue link: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.addWorklogTool = {
+    name: api_1.TOOLS_CONFIG.issues.addWorklog.name,
+    description: api_1.TOOLS_CONFIG.issues.addWorklog.description,
+    parameters: {
+        issueKey: zod_1.z.string().describe("JIRA issue key (e.g., 'TEST-123')"),
+        timeSpent: zod_1.z.string().describe("Time spent in Jira format (e.g., '2h 30m', '1d', '3h')"),
+        comment: zod_1.z.string().optional().describe("Optional description of work performed"),
+        started: zod_1.z.string().optional().describe("When the work started in ISO 8601 format (e.g., '2024-01-15T10:00:00.000+0000'). Defaults to now.")
+    },
+    handler: async ({ issueKey, timeSpent, comment, started }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const result = await jiraApi.addWorklog(issueKey, timeSpent, comment, started);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Worklog added to ${issueKey}: ${timeSpent}\n\n${JSON.stringify(result, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error adding worklog: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.getWatchersTool = {
+    name: api_1.TOOLS_CONFIG.issues.getWatchers.name,
+    description: api_1.TOOLS_CONFIG.issues.getWatchers.description,
+    parameters: {
+        issueKey: zod_1.z.string().describe("JIRA issue key (e.g., 'TEST-123')")
+    },
+    handler: async ({ issueKey }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const watchers = await jiraApi.getWatchers(issueKey);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Watchers for ${issueKey}:\n\n${JSON.stringify(watchers, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error fetching watchers: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.manageWatchersTool = {
+    name: api_1.TOOLS_CONFIG.issues.manageWatchers.name,
+    description: api_1.TOOLS_CONFIG.issues.manageWatchers.description,
+    parameters: {
+        issueKey: zod_1.z.string().describe("JIRA issue key (e.g., 'TEST-123')"),
+        action: zod_1.z.enum(["add", "remove"]).describe("Whether to add or remove the watcher"),
+        username: zod_1.z.string().describe("Username (Jira Server) or account ID (Jira Cloud) of the watcher")
+    },
+    handler: async ({ issueKey, action, username }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            if (action === "add") {
+                await jiraApi.addWatcher(issueKey, username);
+            } else {
+                await jiraApi.removeWatcher(issueKey, username);
+            }
+            return {
+                content: [{
+                        type: "text",
+                        text: `Watcher ${username} ${action === "add" ? "added to" : "removed from"} ${issueKey} successfully`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error ${action}ing watcher: ${error instanceof Error ? error.message : 'Unknown error'}`
                     }],
             };
         }

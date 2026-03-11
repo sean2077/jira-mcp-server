@@ -43,7 +43,7 @@ src/jira-sdk/   → Jira API abstraction layer (service classes)
 src/tools/      → MCP tool definitions and handlers (Zod validation)
 ```
 
-**Entry point:** `src/index.js` - Initializes MCP server, registers 19 tools
+**Entry point:** `src/index.js` - Initializes MCP server, registers 29 tools
 
 **Key patterns:**
 - `createAuthenticatedJiraService()` in `src/utils/auth.js` - Factory creating all service instances per request
@@ -73,9 +73,13 @@ Key file: `src/config/api.js` - `getJiraApiUrl()` function handles URL construct
 | Category | Files | Tools |
 |----------|-------|-------|
 | Issues | `jira-sdk/issues.js`, `tools/issues.js` | search, get, create, update, assign, comment, delete |
+| Workflow | `jira-sdk/issues.js`, `tools/issues.js` | get transitions, transition issue |
+| Linking | `jira-sdk/issues.js`, `tools/issues.js` | get link types, create link, delete link |
+| Worklogs | `jira-sdk/issues.js`, `tools/issues.js` | add worklog |
+| Watchers | `jira-sdk/issues.js`, `tools/issues.js` | get watchers, manage watchers |
 | Projects | `jira-sdk/projects.js`, `tools/projects.js` | list, details, users |
 | Users | `jira-sdk/users.js`, `tools/users.js` | profile, lookup, offboard |
-| Metadata | `jira-sdk/metadata.js`, `tools/metadata.js` | issue types, priorities, statuses |
+| Metadata | `jira-sdk/metadata.js`, `tools/metadata.js` | issue types, priorities, statuses, fields, workflows |
 | Boards | `jira-sdk/boards.js`, `tools/boards.js` | boards, sprints |
 | Bulk Ops | `tools/bulk-operations.js` | user/project analytics with caching |
 

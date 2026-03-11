@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getStatusesTool = exports.getPrioritiesTool = exports.getIssueTypesTool = void 0;
+exports.getWorkflowsTool = exports.getFieldsTool = exports.getStatusesTool = exports.getPrioritiesTool = exports.getIssueTypesTool = void 0;
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
 const api_1 = require("../config/api");
@@ -81,6 +81,58 @@ exports.getStatusesTool = {
                 content: [{
                         type: "text",
                         text: `Error fetching statuses: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.getFieldsTool = {
+    name: api_1.TOOLS_CONFIG.metadata.fields.name,
+    description: api_1.TOOLS_CONFIG.metadata.fields.description,
+    parameters: {},
+    handler: async () => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const fields = await jiraApi.getFields();
+            return {
+                content: [{
+                        type: "text",
+                        text: `JIRA Fields (${fields.length} total):\n\n${JSON.stringify(fields, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error fetching fields: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.getWorkflowsTool = {
+    name: api_1.TOOLS_CONFIG.metadata.workflows.name,
+    description: api_1.TOOLS_CONFIG.metadata.workflows.description,
+    parameters: {
+        projectKey: zod_1.z.string().describe("Project key to get workflow statuses for (e.g., 'TEST')")
+    },
+    handler: async ({ projectKey }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const workflows = await jiraApi.getWorkflows(projectKey);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Workflow statuses for project ${projectKey}:\n\n${JSON.stringify(workflows, null, 2)}`
+                    }],
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error fetching workflows for ${projectKey}: ${error instanceof Error ? error.message : 'Unknown error'}`
                     }],
             };
         }

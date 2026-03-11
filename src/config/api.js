@@ -49,6 +49,38 @@ exports.TOOLS_CONFIG = {
         comment: {
             name: "jira_add_comment_to_issue",
             description: "Add a comment to a Jira issue"
+        },
+        getTransitions: {
+            name: "jira_get_transitions",
+            description: "Get available workflow transitions for a Jira issue (shows what status changes are possible)"
+        },
+        transition: {
+            name: "jira_transition_issue",
+            description: "Transition a Jira issue to a new status (e.g., To Do -> In Progress -> Done)"
+        },
+        getLinkTypes: {
+            name: "jira_get_issue_link_types",
+            description: "Get available issue link types (e.g., Blocks, Relates to, Duplicates)"
+        },
+        createLink: {
+            name: "jira_create_issue_link",
+            description: "Create a link between two Jira issues (e.g., blocks, relates to, duplicates)"
+        },
+        deleteLink: {
+            name: "jira_delete_issue_link",
+            description: "Delete a link between two Jira issues by link ID"
+        },
+        addWorklog: {
+            name: "jira_add_worklog",
+            description: "Log time spent on a Jira issue (worklog)"
+        },
+        getWatchers: {
+            name: "jira_get_watchers",
+            description: "Get watchers of a Jira issue"
+        },
+        manageWatchers: {
+            name: "jira_manage_watchers",
+            description: "Add or remove a watcher on a Jira issue"
         }
     },
     projects: {
@@ -95,6 +127,14 @@ exports.TOOLS_CONFIG = {
         statuses: {
             name: "jira_get_statuses",
             description: "Get JIRA available issue statuses"
+        },
+        fields: {
+            name: "jira_get_fields",
+            description: "Get all available Jira fields including custom fields"
+        },
+        workflows: {
+            name: "jira_get_workflows",
+            description: "Get workflow statuses for each issue type in a Jira project"
         }
     },
     boards: {

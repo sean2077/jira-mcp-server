@@ -129,47 +129,43 @@ class JiraIssuesService {
             key: issue.key,
             summary: issue.fields?.summary,
             status: issue.fields?.status?.name,
+            issueType: issue.fields?.issuetype?.name,
+            priority: issue.fields?.priority?.name,
+            resolution: issue.fields?.resolution?.name || null,
             created: issue.fields?.created,
             updated: issue.fields?.updated,
-            // comments: issue.fields?.comment,
             description,
+            assignee: issue.fields?.assignee?.displayName,
+            reporter: issue.fields?.reporter?.displayName,
+            labels: issue.fields?.labels || [],
+            components: (issue.fields?.components || []).map(c => c.name),
+            fixVersions: (issue.fields?.fixVersions || []).map(v => v.name),
             timetracking: issue.fields?.timetracking,
             worklogs: issue.fields?.worklog,
-            assignee: issue.fields?.assignee?.displayName,
         };
-        // if (issue.fields?.description?.content) {
-        //   const mentions = this.extractIssueMentions(
-        //     issue.fields.description.content,
-        //     "description"
-        //   );
-        //   if (mentions && mentions.length > 0) {
-        //     cleanedIssue.relatedIssues = mentions;
-        //   }
-        // }
-        // if (issue.fields?.issuelinks?.length > 0) {
-        //   const links = issue.fields.issuelinks.map((link: any) => {
-        //     const linkedIssue = link.inwardIssue || link.outwardIssue;
-        //     const relationship = link.type.inward || link.type.outward;
-        //     return {
-        //       key: linkedIssue.key,
-        //       summary: linkedIssue.fields?.summary,
-        //       type: "link" as const,
-        //       relationship,
-        //       source: "description" as const,
-        //     };
-        //   });
-        //   cleanedIssue.relatedIssues = [
-        //     ...(cleanedIssue.relatedIssues || []),
-        //     ...links,
-        //   ];
-        // }
+        if (issue.fields?.issuelinks?.length > 0) {
+            cleanedIssue.issueLinks = issue.fields.issuelinks.map((link) => {
+                const linkedIssue = link.inwardIssue || link.outwardIssue;
+                const direction = link.inwardIssue ? 'inward' : 'outward';
+                const relationship = direction === 'inward' ? link.type.inward : link.type.outward;
+                return {
+                    id: link.id,
+                    key: linkedIssue?.key,
+                    summary: linkedIssue?.fields?.summary,
+                    status: linkedIssue?.fields?.status?.name,
+                    relationship,
+                    direction,
+                    linkType: link.type.name,
+                };
+            });
+        }
         return cleanedIssue;
     }
     async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0) {
         (0, bulk_operations_1.debugLog)("searchIssues", minimalFields);
         const fields = minimalFields
             ? "summary,status,created,updated,assignee,project"
-            : "summary,assignee,status,created,updated,comment,description,timetracking,worklog,project";
+            : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,comment,description,timetracking,worklog,issuelinks,project";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`);
         (0, bulk_operations_1.debugLog)("url", url);
@@ -330,10 +326,28 @@ class JiraIssuesService {
             };
         }
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/transitions`);
-        await this.fetchJson(url, {
-            method: "POST",
-            body: JSON.stringify(transitionData),
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: Object.fromEntries(this.headers.entries()),
+                body: JSON.stringify(transitionData),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                await this.handleFetchError(response);
+            }
+            // Jira Server returns 204 No Content on successful transition
+        }
+        catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
+            }
+            throw error;
+        }
     }
     async assignIssue(issueKey, accountId) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/assignee`);
@@ -394,6 +408,149 @@ class JiraIssuesService {
             method: "POST",
             body: JSON.stringify(commentData),
         });
+    }
+    async getIssueLinkTypes() {
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, "issueLinkType");
+        const response = await this.fetchJson(url);
+        return response.issueLinkTypes || [];
+    }
+    async createIssueLink(linkType, inwardIssueKey, outwardIssueKey, comment) {
+        const linkData = {
+            type: { name: linkType },
+            inwardIssue: { key: inwardIssueKey },
+            outwardIssue: { key: outwardIssueKey },
+        };
+        if (comment) {
+            linkData.comment = {
+                body: this.createAdfFromBody(comment),
+            };
+        }
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, "issueLink");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: Object.fromEntries(this.headers.entries()),
+                body: JSON.stringify(linkData),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                await this.handleFetchError(response);
+            }
+            // Jira Server returns 201 with no body on success
+        }
+        catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
+            }
+            throw error;
+        }
+    }
+    async deleteIssueLink(linkId) {
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issueLink/${linkId}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+        try {
+            const response = await fetch(url, {
+                method: "DELETE",
+                headers: Object.fromEntries(this.headers.entries()),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                await this.handleFetchError(response);
+            }
+            // Jira Server returns 204 No Content on success
+        }
+        catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
+            }
+            throw error;
+        }
+    }
+    async addWorklog(issueKey, timeSpent, comment, started) {
+        const worklogData = {
+            timeSpent,
+        };
+        if (comment) {
+            worklogData.comment = this.createAdfFromBody(comment);
+        }
+        if (started) {
+            worklogData.started = started;
+        }
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/worklog`);
+        return await this.fetchJson(url, {
+            method: "POST",
+            body: JSON.stringify(worklogData),
+        });
+    }
+    async getWatchers(issueKey) {
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/watchers`);
+        const response = await this.fetchJson(url);
+        return {
+            watchCount: response.watchCount || 0,
+            isWatching: response.isWatching || false,
+            watchers: (response.watchers || []).map(w => ({
+                accountId: w.accountId || w.key || w.name,
+                displayName: w.displayName,
+                active: w.active !== false,
+            })),
+        };
+    }
+    async addWatcher(issueKey, username) {
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/watchers`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: Object.fromEntries(this.headers.entries()),
+                body: JSON.stringify(username),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                await this.handleFetchError(response);
+            }
+            // Jira Server returns 204 No Content on success
+        }
+        catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
+            }
+            throw error;
+        }
+    }
+    async removeWatcher(issueKey, username) {
+        const paramName = index_1.config.jira.type === 'server' ? 'username' : 'accountId';
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/watchers?${paramName}=${encodeURIComponent(username)}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+        try {
+            const response = await fetch(url, {
+                method: "DELETE",
+                headers: Object.fromEntries(this.headers.entries()),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                await this.handleFetchError(response);
+            }
+            // Jira Server returns 204 No Content on success
+        }
+        catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
+            }
+            throw error;
+        }
     }
     setRequestTimeout(timeout) {
         this.requestTimeout = timeout;

@@ -193,4 +193,72 @@ describe('Issues Service (Jira Server)', () => {
       console.log(`评论已添加，ID: ${result.id}`);
     });
   });
+
+  describe('getTransitions', () => {
+    it('获取Issue可用的状态转换', async () => {
+      if (skipIfNotConfigured()) return;
+      if (!testConfig.testIssueKey) {
+        console.log('跳过: 未配置 TEST_ISSUE_KEY');
+        return;
+      }
+
+      const transitions = await service.getTransitions(testConfig.testIssueKey);
+
+      expect(Array.isArray(transitions)).toBe(true);
+      expect(transitions.length).toBeGreaterThan(0);
+      expect(transitions[0]).toHaveProperty('id');
+      expect(transitions[0]).toHaveProperty('name');
+      console.log(`可用转换: ${transitions.map(t => `${t.id}: ${t.name}`).join(', ')}`);
+    });
+  });
+
+  describe('getIssueLinkTypes', () => {
+    it('获取Issue链接类型', async () => {
+      if (skipIfNotConfigured()) return;
+
+      const linkTypes = await service.getIssueLinkTypes();
+
+      expect(Array.isArray(linkTypes)).toBe(true);
+      expect(linkTypes.length).toBeGreaterThan(0);
+      expect(linkTypes[0]).toHaveProperty('name');
+      console.log(`链接类型: ${linkTypes.map(t => t.name).join(', ')}`);
+    });
+  });
+
+  describe('getWatchers', () => {
+    it('获取Issue关注者', async () => {
+      if (skipIfNotConfigured()) return;
+      if (!testConfig.testIssueKey) {
+        console.log('跳过: 未配置 TEST_ISSUE_KEY');
+        return;
+      }
+
+      const watchers = await service.getWatchers(testConfig.testIssueKey);
+
+      expect(watchers).toHaveProperty('watchCount');
+      expect(watchers).toHaveProperty('watchers');
+      expect(Array.isArray(watchers.watchers)).toBe(true);
+      console.log(`关注者数量: ${watchers.watchCount}`);
+    });
+  });
+
+  describe('cleanIssue 增强输出', () => {
+    it('返回增强字段', async () => {
+      if (skipIfNotConfigured()) return;
+      if (!testConfig.testIssueKey) {
+        console.log('跳过: 未配置 TEST_ISSUE_KEY');
+        return;
+      }
+
+      const issue = await service.getIssueWithComments(testConfig.testIssueKey);
+
+      expect(issue).toHaveProperty('issueType');
+      expect(issue).toHaveProperty('priority');
+      expect(issue).toHaveProperty('reporter');
+      expect(issue).toHaveProperty('labels');
+      expect(issue).toHaveProperty('components');
+      expect(issue).toHaveProperty('fixVersions');
+      console.log(`类型: ${issue.issueType}, 优先级: ${issue.priority}, 报告人: ${issue.reporter}`);
+    });
+  });
 });

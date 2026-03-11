@@ -166,6 +166,24 @@ async function createAuthenticatedJiraService() {
         // Boards methods
         getBoards: (projectKeyOrId, type, maxResults) => services.boards.getBoards(projectKeyOrId, type, maxResults),
         getSprints: (boardId, state, maxResults) => services.boards.getSprints(boardId, state, maxResults),
+        // Transitions methods
+        getTransitions: (issueKey) => services.issues.getTransitions(issueKey),
+        transitionIssue: (issueKey, transitionId, comment) => services.issues.transitionIssue(issueKey, transitionId, comment),
+        // Issue linking methods
+        getIssueLinkTypes: () => services.issues.getIssueLinkTypes(),
+        createIssueLink: (linkType, inwardIssueKey, outwardIssueKey, comment) =>
+            services.issues.createIssueLink(linkType, inwardIssueKey, outwardIssueKey, comment),
+        deleteIssueLink: (linkId) => services.issues.deleteIssueLink(linkId),
+        // Worklog methods
+        addWorklog: (issueKey, timeSpent, comment, started) =>
+            services.issues.addWorklog(issueKey, timeSpent, comment, started),
+        // Watcher methods
+        getWatchers: (issueKey) => services.issues.getWatchers(issueKey),
+        addWatcher: (issueKey, username) => services.issues.addWatcher(issueKey, username),
+        removeWatcher: (issueKey, username) => services.issues.removeWatcher(issueKey, username),
+        // Additional metadata methods
+        getFields: () => services.metadata.getFields(),
+        getWorkflows: (projectKey) => services.metadata.getWorkflows(projectKey),
         // Resources methods
         getAccessibleAtlassianResources: () => services.resources.getAccessibleAtlassianResources(),
         // Users methods

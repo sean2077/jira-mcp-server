@@ -52,6 +52,18 @@ server.tool(issues_1.getIssueTool.name, issues_1.getIssueTool.description, issue
 server.tool(issues_1.createIssueTool.name, issues_1.createIssueTool.description, issues_1.createIssueTool.parameters, createAuthenticatedHandler(issues_1.createIssueTool.handler));
 server.tool(issues_1.updateIssueTool.name, issues_1.updateIssueTool.description, issues_1.updateIssueTool.parameters, createAuthenticatedHandler(issues_1.updateIssueTool.handler));
 server.tool(issues_1.addCommentTool.name, issues_1.addCommentTool.description, issues_1.addCommentTool.parameters, createAuthenticatedHandler(issues_1.addCommentTool.handler));
+// Register Transitions tools
+server.tool(issues_1.getTransitionsTool.name, issues_1.getTransitionsTool.description, issues_1.getTransitionsTool.parameters, createAuthenticatedHandler(issues_1.getTransitionsTool.handler));
+server.tool(issues_1.transitionIssueTool.name, issues_1.transitionIssueTool.description, issues_1.transitionIssueTool.parameters, createAuthenticatedHandler(issues_1.transitionIssueTool.handler));
+// Register Issue Linking tools
+server.tool(issues_1.getIssueLinkTypesTool.name, issues_1.getIssueLinkTypesTool.description, issues_1.getIssueLinkTypesTool.parameters, createAuthenticatedHandler(issues_1.getIssueLinkTypesTool.handler));
+server.tool(issues_1.createIssueLinkTool.name, issues_1.createIssueLinkTool.description, issues_1.createIssueLinkTool.parameters, createAuthenticatedHandler(issues_1.createIssueLinkTool.handler));
+server.tool(issues_1.deleteIssueLinkTool.name, issues_1.deleteIssueLinkTool.description, issues_1.deleteIssueLinkTool.parameters, createAuthenticatedHandler(issues_1.deleteIssueLinkTool.handler));
+// Register Worklog tool
+server.tool(issues_1.addWorklogTool.name, issues_1.addWorklogTool.description, issues_1.addWorklogTool.parameters, createAuthenticatedHandler(issues_1.addWorklogTool.handler));
+// Register Watchers tools
+server.tool(issues_1.getWatchersTool.name, issues_1.getWatchersTool.description, issues_1.getWatchersTool.parameters, createAuthenticatedHandler(issues_1.getWatchersTool.handler));
+server.tool(issues_1.manageWatchersTool.name, issues_1.manageWatchersTool.description, issues_1.manageWatchersTool.parameters, createAuthenticatedHandler(issues_1.manageWatchersTool.handler));
 // Register Projects tools
 server.tool(projects_1.getProjectsTool.name, projects_1.getProjectsTool.description, projects_1.getProjectsTool.parameters, createAuthenticatedHandler(projects_1.getProjectsTool.handler));
 server.tool(projects_1.getProjectDetailsTool.name, projects_1.getProjectDetailsTool.description, projects_1.getProjectDetailsTool.parameters, createAuthenticatedHandler(projects_1.getProjectDetailsTool.handler));
@@ -63,6 +75,8 @@ server.tool(users_1.lookupJiraAccountIdTool.name, users_1.lookupJiraAccountIdToo
 server.tool(metadata_1.getIssueTypesTool.name, metadata_1.getIssueTypesTool.description, metadata_1.getIssueTypesTool.parameters, createAuthenticatedHandler(metadata_1.getIssueTypesTool.handler));
 server.tool(metadata_1.getPrioritiesTool.name, metadata_1.getPrioritiesTool.description, metadata_1.getPrioritiesTool.parameters, createAuthenticatedHandler(metadata_1.getPrioritiesTool.handler));
 server.tool(metadata_1.getStatusesTool.name, metadata_1.getStatusesTool.description, metadata_1.getStatusesTool.parameters, createAuthenticatedHandler(metadata_1.getStatusesTool.handler));
+server.tool(metadata_1.getFieldsTool.name, metadata_1.getFieldsTool.description, metadata_1.getFieldsTool.parameters, createAuthenticatedHandler(metadata_1.getFieldsTool.handler));
+server.tool(metadata_1.getWorkflowsTool.name, metadata_1.getWorkflowsTool.description, metadata_1.getWorkflowsTool.parameters, createAuthenticatedHandler(metadata_1.getWorkflowsTool.handler));
 // Register Boards tools
 server.tool(boards_1.getBoardsTool.name, boards_1.getBoardsTool.description, boards_1.getBoardsTool.parameters, createAuthenticatedHandler(boards_1.getBoardsTool.handler));
 server.tool(boards_1.getSprintsTool.name, boards_1.getSprintsTool.description, boards_1.getSprintsTool.parameters, createAuthenticatedHandler(boards_1.getSprintsTool.handler));

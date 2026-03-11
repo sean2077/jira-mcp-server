@@ -64,4 +64,22 @@ describe('Metadata Service (Jira Server)', () => {
       console.log(`共 ${fields.length} 个字段`);
     });
   });
+
+  describe('getWorkflows', () => {
+    it('获取项目工作流', async () => {
+      if (skipIfNotConfigured()) return;
+      if (!testConfig.testProjectKey) {
+        console.log('跳过: 未配置 TEST_PROJECT_KEY');
+        return;
+      }
+
+      const workflows = await service.getWorkflows(testConfig.testProjectKey);
+
+      expect(Array.isArray(workflows)).toBe(true);
+      expect(workflows.length).toBeGreaterThan(0);
+      expect(workflows[0]).toHaveProperty('name');
+      expect(workflows[0]).toHaveProperty('statuses');
+      console.log(`Issue类型工作流: ${workflows.map(w => `${w.name} (${w.statuses.length} statuses)`).join(', ')}`);
+    });
+  });
 });

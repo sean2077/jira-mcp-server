@@ -21,30 +21,89 @@ Based on [@aot-tech/jira-mcp-server](https://www.npmjs.com/package/@aot-tech/jir
 - Enabled issue operation tools that were commented out
 - Fixed authentication bug: services now correctly use Basic Auth for Jira Server
 - Fixed empty response handling for update/delete/assign operations (Jira Server returns 204)
+- Added workflow transitions, issue linking, worklogs, and watchers tools
+- Enhanced issue output with priority, labels, components, fix versions, and issue links
 - Added integration tests with Vitest
 
 ## Supported Tools
 
+### Issues
+
 | Tool | Description |
 |------|-------------|
-| `jira_get_issue_info` | Get single issue details |
 | `jira_search_issues` | Search issues via JQL |
+| `jira_get_issue_info` | Get single issue details |
 | `jira_create_issue` | Create new issue |
 | `jira_update_issue` | Update existing issue |
-| `jira_assign_issue` | Assign issue to user |
-| `jira_add_comment` | Add comment to issue |
 | `jira_delete_issue` | Delete issue |
+| `jira_assign_issue` | Assign issue to user |
+| `jira_add_comment_to_issue` | Add comment to issue |
+
+### Workflow
+
+| Tool | Description |
+|------|-------------|
+| `jira_get_transitions` | Get available status transitions for an issue |
+| `jira_transition_issue` | Transition issue to a new status |
+
+### Issue Linking
+
+| Tool | Description |
+|------|-------------|
+| `jira_get_issue_link_types` | Get available link types (Blocks, Relates, etc.) |
+| `jira_create_issue_link` | Create a link between two issues |
+| `jira_delete_issue_link` | Delete an issue link |
+
+### Time Tracking
+
+| Tool | Description |
+|------|-------------|
+| `jira_add_worklog` | Log time spent on an issue |
+
+### Watchers
+
+| Tool | Description |
+|------|-------------|
+| `jira_get_watchers` | Get watchers of an issue |
+| `jira_manage_watchers` | Add or remove a watcher |
+
+### Projects
+
+| Tool | Description |
+|------|-------------|
 | `jira_get_all_projects` | List all projects |
 | `jira_get_project_details` | Get project details |
 | `jira_get_project_users` | Get project members |
+
+### Users
+
+| Tool | Description |
+|------|-------------|
 | `jira_get_current_user` | Get current user |
 | `jira_get_user_profile` | Get user profile |
 | `jira_lookup_account_id` | Lookup user by name |
+
+### Metadata
+
+| Tool | Description |
+|------|-------------|
 | `jira_get_issue_types` | Get issue types |
 | `jira_get_priorities` | Get priorities |
 | `jira_get_statuses` | Get statuses |
+| `jira_get_fields` | Get all fields including custom fields |
+| `jira_get_workflows` | Get workflow statuses per issue type |
+
+### Boards & Sprints
+
+| Tool | Description |
+|------|-------------|
 | `jira_get_boards` | Get boards |
 | `jira_get_sprints` | Get sprints |
+
+### Analytics
+
+| Tool | Description |
+|------|-------------|
 | `jira_bulk_user_analytics` | User analytics |
 | `jira_bulk_project_analytics` | Project analytics |
 
@@ -129,8 +188,12 @@ TEST_ISSUE_KEY=MYPROJECT-1    # Optional
 |---------|--------------|---------------|
 | Jira Server 8.1 | ✅ | ❌ Requires 8.14+ |
 | Jira Cloud | ✅ | ✅ |
-| Create Issue | ✅ | ✅ |
+| Issue CRUD | ✅ | ✅ |
 | Search (JQL) | ✅ | ✅ |
+| Workflow Transitions | ✅ | ✅ |
+| Issue Linking | ✅ | ❌ |
+| Worklogs | ✅ | ❌ |
+| Watchers | ✅ | ❌ |
 | Confluence | ❌ | ✅ |
 | Language | JavaScript | Python |
 
