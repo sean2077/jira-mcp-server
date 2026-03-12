@@ -161,18 +161,36 @@ class JiraIssuesService {
         }
         return cleanedIssue;
     }
+    cleanIssueMinimal(issue) {
+        return {
+            key: issue.key,
+            summary: issue.fields?.summary,
+            status: issue.fields?.status?.name,
+            priority: issue.fields?.priority?.name || null,
+            assignee: issue.fields?.assignee?.displayName || null,
+            assigneeId: issue.fields?.assignee?.name || issue.fields?.assignee?.key || null,
+            project: issue.fields?.project?.key,
+            created: issue.fields?.created,
+            updated: issue.fields?.updated,
+        };
+    }
     async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0) {
         (0, bulk_operations_1.debugLog)("searchIssues", minimalFields);
         const fields = minimalFields
-            ? "summary,status,created,updated,assignee,project"
+            ? "summary,status,priority,created,updated,assignee,project"
             : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,comment,description,timetracking,worklog,issuelinks,project";
+        // Only expand changelog for full queries, skip for minimal to reduce response size
+        const expand = minimalFields ? "" : "&expand=changelog";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`);
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}${expand}&fields=${fields}`);
         (0, bulk_operations_1.debugLog)("url", url);
         const response = await this.fetchJson(url);
         (0, bulk_operations_1.debugLog)("response", response);
+        const rawIssues = response.issues || [];
         return {
-            issues: response.issues || [],
+            issues: minimalFields
+                ? rawIssues.map(issue => this.cleanIssueMinimal(issue))
+                : rawIssues.map(issue => this.cleanIssue(issue)),
             total: response.total || 0,
             startAt: response.startAt || 0,
             hasNextPage: response?.total > startAt + pageSize,
