@@ -61,6 +61,8 @@ server.tool(issues_1.createIssueLinkTool.name, issues_1.createIssueLinkTool.desc
 server.tool(issues_1.deleteIssueLinkTool.name, issues_1.deleteIssueLinkTool.description, issues_1.deleteIssueLinkTool.parameters, createAuthenticatedHandler(issues_1.deleteIssueLinkTool.handler));
 // Register Worklog tool
 server.tool(issues_1.addWorklogTool.name, issues_1.addWorklogTool.description, issues_1.addWorklogTool.parameters, createAuthenticatedHandler(issues_1.addWorklogTool.handler));
+// Register Batch Search tool
+server.tool(issues_1.batchSearchIssuesTool.name, issues_1.batchSearchIssuesTool.description, issues_1.batchSearchIssuesTool.parameters, createAuthenticatedHandler(issues_1.batchSearchIssuesTool.handler));
 // Register Watchers tools
 server.tool(issues_1.getWatchersTool.name, issues_1.getWatchersTool.description, issues_1.getWatchersTool.parameters, createAuthenticatedHandler(issues_1.getWatchersTool.handler));
 server.tool(issues_1.manageWatchersTool.name, issues_1.manageWatchersTool.description, issues_1.manageWatchersTool.parameters, createAuthenticatedHandler(issues_1.manageWatchersTool.handler));

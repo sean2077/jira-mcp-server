@@ -17,7 +17,7 @@ exports.getProjectsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Projects:\n\n${JSON.stringify(projects, null, 2)}`
+                        text: `JIRA Projects:\n\n${JSON.stringify(projects)}`
                     }],
             };
         }
@@ -45,7 +45,7 @@ exports.getProjectDetailsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Project Details for ${projectKey}:\n\n${JSON.stringify(project, null, 2)}`
+                        text: `JIRA Project Details for ${projectKey}:\n\n${JSON.stringify(project)}`
                     }],
             };
         }
@@ -75,7 +75,7 @@ exports.getProjectUsersTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Users with access to ${projectKey}:\n\n${JSON.stringify(users, null, 2)}`
+                        text: `Users with access to ${projectKey}:\n\n${JSON.stringify(users)}`
                     }],
             };
         }

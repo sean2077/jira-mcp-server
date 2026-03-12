@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.manageWatchersTool = exports.getWatchersTool = exports.addWorklogTool = exports.deleteIssueLinkTool = exports.createIssueLinkTool = exports.getIssueLinkTypesTool = exports.transitionIssueTool = exports.getTransitionsTool = exports.addCommentTool = exports.assignIssueTool = exports.deleteIssueTool = exports.updateIssueTool = exports.createIssueTool = exports.getIssueTool = exports.searchIssuesTool = void 0;
+exports.batchSearchIssuesTool = exports.manageWatchersTool = exports.getWatchersTool = exports.addWorklogTool = exports.deleteIssueLinkTool = exports.createIssueLinkTool = exports.getIssueLinkTypesTool = exports.transitionIssueTool = exports.getTransitionsTool = exports.addCommentTool = exports.assignIssueTool = exports.deleteIssueTool = exports.updateIssueTool = exports.createIssueTool = exports.getIssueTool = exports.searchIssuesTool = void 0;
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
 const api_1 = require("../config/api");
@@ -31,7 +31,7 @@ exports.searchIssuesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Search Results for query: "${searchString}"\n\n${JSON.stringify(issues, null, 2)}`
+                        text: `JIRA Search Results for query: "${searchString}"\n\n${JSON.stringify(issues)}`
                     }],
             };
         }
@@ -59,7 +59,7 @@ exports.getIssueTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue Details for ${issueKey}:\n\n${JSON.stringify(issue, null, 2)}`
+                        text: `JIRA Issue Details for ${issueKey}:\n\n${JSON.stringify(issue)}`
                     }],
             };
         }
@@ -106,7 +106,7 @@ exports.createIssueTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue created successfully:\n\n${JSON.stringify(issue, null, 2)}`
+                        text: `JIRA Issue created successfully:\n\n${JSON.stringify(issue)}`
                     }],
             };
         }
@@ -135,7 +135,7 @@ exports.updateIssueTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue ${issueKey} updated successfully:\n\n${JSON.stringify(result, null, 2)}`
+                        text: `JIRA Issue ${issueKey} updated successfully:\n\n${JSON.stringify(result)}`
                     }],
             };
         }
@@ -192,7 +192,7 @@ exports.assignIssueTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue ${issueKey} assigned successfully:\n\n${JSON.stringify(result, null, 2)}`
+                        text: `JIRA Issue ${issueKey} assigned successfully:\n\n${JSON.stringify(result)}`
                     }],
             };
         }
@@ -221,7 +221,7 @@ exports.addCommentTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Comment added to JIRA Issue ${issueKey} successfully:\n\n${JSON.stringify(result, null, 2)}`
+                        text: `Comment added to JIRA Issue ${issueKey} successfully:\n\n${JSON.stringify(result)}`
                     }],
             };
         }
@@ -248,7 +248,7 @@ exports.getTransitionsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Available transitions for ${issueKey}:\n\n${JSON.stringify(transitions, null, 2)}`
+                        text: `Available transitions for ${issueKey}:\n\n${JSON.stringify(transitions)}`
                     }],
             };
         }
@@ -302,7 +302,7 @@ exports.getIssueLinkTypesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Available issue link types:\n\n${JSON.stringify(linkTypes, null, 2)}`
+                        text: `Available issue link types:\n\n${JSON.stringify(linkTypes)}`
                     }],
             };
         }
@@ -389,7 +389,7 @@ exports.addWorklogTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Worklog added to ${issueKey}: ${timeSpent}\n\n${JSON.stringify(result, null, 2)}`
+                        text: `Worklog added to ${issueKey}: ${timeSpent}\n\n${JSON.stringify(result)}`
                     }],
             };
         }
@@ -416,7 +416,7 @@ exports.getWatchersTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Watchers for ${issueKey}:\n\n${JSON.stringify(watchers, null, 2)}`
+                        text: `Watchers for ${issueKey}:\n\n${JSON.stringify(watchers)}`
                     }],
             };
         }
@@ -458,6 +458,48 @@ exports.manageWatchersTool = {
                 content: [{
                         type: "text",
                         text: `Error ${action}ing watcher: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+            };
+        }
+    }
+};
+exports.batchSearchIssuesTool = {
+    name: api_1.TOOLS_CONFIG.issues.batchSearch.name,
+    description: api_1.TOOLS_CONFIG.issues.batchSearch.description,
+    parameters: {
+        queries: zod_1.z.array(zod_1.z.object({
+            id: zod_1.z.string().describe("Unique identifier for this query, used to match results"),
+            jql: zod_1.z.string().describe("JQL query string"),
+            pageSize: zod_1.z.number().optional().default(20).describe("Number of results per query"),
+            minimalFields: zod_1.z.boolean().optional().default(true).describe("Use minimal fields for better performance"),
+            startAt: zod_1.z.number().optional().default(0).describe("Pagination offset")
+        })).describe("Array of JQL queries to execute in parallel")
+    },
+    handler: async ({ queries }) => {
+        try {
+            const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
+            const results = await Promise.all(queries.map(async (q) => {
+                try {
+                    const data = await jiraApi.searchIssues(q.jql, q.pageSize, q.minimalFields, q.startAt);
+                    return { id: q.id, ...data };
+                }
+                catch (error) {
+                    return { id: q.id, error: error instanceof Error ? error.message : 'Unknown error', issues: [], total: 0 };
+                }
+            }));
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify(results)
+                    }],
+            };
+        }
+        catch (error) {
+            const errorMessage = (0, auth_1.extractErrorMessage)(error);
+            return {
+                content: [{
+                        type: "text",
+                        text: `Error in batch search: ${errorMessage}`
                     }],
             };
         }

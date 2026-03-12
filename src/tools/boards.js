@@ -17,7 +17,7 @@ exports.getBoardsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Boards:\n\n${JSON.stringify(boards, null, 2)}`
+                        text: `JIRA Boards:\n\n${JSON.stringify(boards)}`
                     }],
             };
         }
@@ -46,7 +46,7 @@ exports.getSprintsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Sprints for Board ${boardId}:\n\n${JSON.stringify(sprints, null, 2)}`
+                        text: `Sprints for Board ${boardId}:\n\n${JSON.stringify(sprints)}`
                     }],
             };
         }

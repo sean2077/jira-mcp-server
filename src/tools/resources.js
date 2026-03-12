@@ -14,7 +14,7 @@ exports.getAtlassianResourcesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Atlassian Cloud ID: ${JSON.stringify(resources, null, 2)}`
+                        text: `Atlassian Cloud ID: ${JSON.stringify(resources)}`
                     }],
             };
         }

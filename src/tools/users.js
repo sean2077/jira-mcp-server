@@ -22,7 +22,7 @@ exports.getUserProfileTool = {
                 content: [
                     {
                         type: "text",
-                        text: `User Profile:\n\n${JSON.stringify(user, null, 2)}`,
+                        text: `User Profile:\n\n${JSON.stringify(user)}`,
                     },
                 ],
             };
@@ -58,7 +58,7 @@ exports.lookupJiraAccountIdTool = {
                 content: [
                     {
                         type: "text",
-                        text: `Atlassian Resources: ${JSON.stringify(resources, null, 2)}`,
+                        text: `Atlassian Resources: ${JSON.stringify(resources)}`,
                     },
                 ],
             };
@@ -92,7 +92,7 @@ exports.getCurrentUserTool = {
                 content: [
                     {
                         type: "text",
-                        text: `Current User: ${JSON.stringify(user, null, 2)}`,
+                        text: `Current User: ${JSON.stringify(user)}`,
                     },
                 ],
             };
@@ -195,7 +195,7 @@ exports.offboardEmployeeTool = {
                 content: [
                     {
                         type: "text",
-                        text: `JIRA Employee Offboarding Completed Successfully!\n\n${JSON.stringify(newOffboardedUser, null, 2)}\n\nOffboarded Users Registry:\n${JSON.stringify(DUMMY_JIRA_OFFBOARD_DATA.offboardedUsers.slice(-3), null, 2)}`,
+                        text: `JIRA Employee Offboarding Completed Successfully!\n\n${JSON.stringify(newOffboardedUser)}\n\nOffboarded Users Registry:\n${JSON.stringify(DUMMY_JIRA_OFFBOARD_DATA.offboardedUsers.slice(-3))}`,
                     },
                 ],
             };

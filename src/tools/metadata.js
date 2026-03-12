@@ -18,7 +18,7 @@ exports.getIssueTypesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Issue Types for ${projectId}:\n\n${JSON.stringify(issueTypes, null, 2)}`
+                        text: `Issue Types for ${projectId}:\n\n${JSON.stringify(issueTypes)}`
                     }],
             };
         }
@@ -45,7 +45,7 @@ exports.getPrioritiesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Priorities:\n\n${JSON.stringify(priorities, null, 2)}`
+                        text: `JIRA Priorities:\n\n${JSON.stringify(priorities)}`
                     }],
             };
         }
@@ -72,7 +72,7 @@ exports.getStatusesTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Statuses:\n\n${JSON.stringify(statuses, null, 2)}`
+                        text: `JIRA Statuses:\n\n${JSON.stringify(statuses)}`
                     }],
             };
         }
@@ -97,7 +97,7 @@ exports.getFieldsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Fields (${fields.length} total):\n\n${JSON.stringify(fields, null, 2)}`
+                        text: `JIRA Fields (${fields.length} total):\n\n${JSON.stringify(fields)}`
                     }],
             };
         }
@@ -124,7 +124,7 @@ exports.getWorkflowsTool = {
             return {
                 content: [{
                         type: "text",
-                        text: `Workflow statuses for project ${projectKey}:\n\n${JSON.stringify(workflows, null, 2)}`
+                        text: `Workflow statuses for project ${projectKey}:\n\n${JSON.stringify(workflows)}`
                     }],
             };
         }

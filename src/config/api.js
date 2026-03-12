@@ -81,6 +81,10 @@ exports.TOOLS_CONFIG = {
         manageWatchers: {
             name: "jira_manage_watchers",
             description: "Add or remove a watcher on a Jira issue"
+        },
+        batchSearch: {
+            name: "jira_batch_search",
+            description: "Execute multiple JQL queries in parallel and return all results at once. Use this instead of multiple jira_search_issues calls when you need to run 2+ independent queries."
         }
     },
     projects: {

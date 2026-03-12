@@ -87,7 +87,7 @@ exports.bulkUserProductivityTool = {
                 return {
                     content: [{
                             type: "text",
-                            text: JSON.stringify(cachedResult, null, 2)
+                            text: JSON.stringify(cachedResult)
                         }],
                 };
             }
@@ -170,7 +170,7 @@ exports.bulkUserProductivityTool = {
             return {
                 content: [{
                         type: "text",
-                        text: JSON.stringify(result, null, 2)
+                        text: JSON.stringify(result)
                     }],
             };
         }
@@ -206,7 +206,7 @@ exports.bulkProjectProductivityTool = {
                 return {
                     content: [{
                             type: "text",
-                            text: JSON.stringify(cachedResult, null, 2)
+                            text: JSON.stringify(cachedResult)
                         }],
                 };
             }
@@ -253,7 +253,7 @@ exports.bulkProjectProductivityTool = {
             return {
                 content: [{
                         type: "text",
-                        text: JSON.stringify(projectAnalytics, null, 2)
+                        text: JSON.stringify(projectAnalytics)
                     }],
             };
         }
@@ -420,7 +420,7 @@ exports.bulkProjectProductivityTool = {
 //             return {
 //                 content: [{
 //                     type: "text" as const,
-//                     text: JSON.stringify(result, null, 2)
+//                     text: JSON.stringify(result)
 //                 }],
 //             };
 //         } catch (error) {
@@ -538,7 +538,7 @@ exports.bulkProjectProductivityTool = {
 //             return {
 //                 content: [{
 //                     type: "text" as const,
-//                     text: JSON.stringify(result, null, 2)
+//                     text: JSON.stringify(result)
 //                 }],
 //             };
 //         } catch (error) {
@@ -677,7 +677,7 @@ exports.bulkProjectProductivityTool = {
 //             return {
 //                 content: [{
 //                     type: "text" as const,
-//                     text: JSON.stringify(result, null, 2)
+//                     text: JSON.stringify(result)
 //                 }],
 //             };
 //         } catch (error) {
