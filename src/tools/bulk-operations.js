@@ -101,7 +101,7 @@ exports.bulkUserProductivityTool = {
             debugLog('JQL Query:', jql);
             debugLog('Cloud ID:', params.cloudId);
             debugLog('Users to search:', params.users);
-            const issues = await jiraApi.searchIssues(jql, 1000, false, 0);
+            const issues = await jiraApi.searchIssues(jql, 100, false, 0, true);
             debugLog(`Total issues found: ${issues?.total || 0}`);
             // Process data for each user - optimized for performance
             const userAnalytics = params.users.map(userId => {
@@ -219,7 +219,7 @@ exports.bulkProjectProductivityTool = {
             debugLog('JQL Query:', jql);
             debugLog('Cloud ID:', params.cloudId);
             debugLog('Users to search:', params.users);
-            const issues = await jiraApi.searchIssues(jql, 1000, true, 0);
+            const issues = await jiraApi.searchIssues(jql, 100, false, 0, true);
             debugLog(`Total issues found: ${issues?.total || 0}`);
             debugLog("issues", issues?.issues);
             // Filter the issues by projectKeys

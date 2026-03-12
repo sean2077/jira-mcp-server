@@ -140,8 +140,6 @@ class JiraIssuesService {
             labels: issue.fields?.labels || [],
             components: (issue.fields?.components || []).map(c => c.name),
             fixVersions: (issue.fields?.fixVersions || []).map(v => v.name),
-            timetracking: issue.fields?.timetracking,
-            worklogs: issue.fields?.worklog,
         };
         if (issue.fields?.issuelinks?.length > 0) {
             cleanedIssue.issueLinks = issue.fields.issuelinks.map((link) => {
@@ -174,13 +172,17 @@ class JiraIssuesService {
             updated: issue.fields?.updated,
         };
     }
-    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0) {
+    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0, raw = false) {
+        // Cap pageSize to prevent oversized responses
+        const maxPageSize = 100;
+        pageSize = Math.min(pageSize, maxPageSize);
         (0, bulk_operations_1.debugLog)("searchIssues", minimalFields);
         const fields = minimalFields
             ? "summary,status,priority,created,updated,assignee,project"
-            : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,comment,description,timetracking,worklog,issuelinks,project";
-        // Only expand changelog for full queries, skip for minimal to reduce response size
-        const expand = minimalFields ? "" : "&expand=changelog";
+            : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
+        // Skip changelog and heavy fields (comment, worklog) to reduce response size
+        // Use getIssueWithComments() for full issue details with comments
+        const expand = "";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}${expand}&fields=${fields}`);
         (0, bulk_operations_1.debugLog)("url", url);
@@ -188,9 +190,11 @@ class JiraIssuesService {
         (0, bulk_operations_1.debugLog)("response", response);
         const rawIssues = response.issues || [];
         return {
-            issues: minimalFields
-                ? rawIssues.map(issue => this.cleanIssueMinimal(issue))
-                : rawIssues.map(issue => this.cleanIssue(issue)),
+            issues: raw
+                ? rawIssues
+                : minimalFields
+                    ? rawIssues.map(issue => this.cleanIssueMinimal(issue))
+                    : rawIssues.map(issue => this.cleanIssue(issue)),
             total: response.total || 0,
             startAt: response.startAt || 0,
             hasNextPage: response?.total > startAt + pageSize,

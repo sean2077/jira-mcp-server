@@ -129,12 +129,21 @@ async function createJiraServices(isOauth, token) {
         resources: (0, resources_1.createResourcesService)(token, isOauth)
     };
 }
+// Cached services instance
+let _cachedServices = null;
+let _cachedToken = null;
 // Pure function to create authenticated JIRA services
 async function createAuthenticatedJiraServices() {
     const token = getBearerToken();
+    // Reuse cached services if token hasn't changed
+    if (_cachedServices && _cachedToken === token) {
+        return _cachedServices;
+    }
     // Use OAuth for Cloud, Basic Auth for Server
     const isOauth = config_1.config.jira.type !== 'server';
-    return await createJiraServices(isOauth, token || '');
+    _cachedServices = await createJiraServices(isOauth, token || '');
+    _cachedToken = token;
+    return _cachedServices;
 }
 // Backward compatibility - create individual service
 async function createAuthenticatedJiraService() {

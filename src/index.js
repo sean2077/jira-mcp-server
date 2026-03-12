@@ -51,6 +51,8 @@ server.tool(users_1.getCurrentUserTool.name, users_1.getCurrentUserTool.descript
 server.tool(issues_1.getIssueTool.name, issues_1.getIssueTool.description, issues_1.getIssueTool.parameters, createAuthenticatedHandler(issues_1.getIssueTool.handler));
 server.tool(issues_1.createIssueTool.name, issues_1.createIssueTool.description, issues_1.createIssueTool.parameters, createAuthenticatedHandler(issues_1.createIssueTool.handler));
 server.tool(issues_1.updateIssueTool.name, issues_1.updateIssueTool.description, issues_1.updateIssueTool.parameters, createAuthenticatedHandler(issues_1.updateIssueTool.handler));
+server.tool(issues_1.deleteIssueTool.name, issues_1.deleteIssueTool.description, issues_1.deleteIssueTool.parameters, createAuthenticatedHandler(issues_1.deleteIssueTool.handler));
+server.tool(issues_1.assignIssueTool.name, issues_1.assignIssueTool.description, issues_1.assignIssueTool.parameters, createAuthenticatedHandler(issues_1.assignIssueTool.handler));
 server.tool(issues_1.addCommentTool.name, issues_1.addCommentTool.description, issues_1.addCommentTool.parameters, createAuthenticatedHandler(issues_1.addCommentTool.handler));
 // Register Transitions tools
 server.tool(issues_1.getTransitionsTool.name, issues_1.getTransitionsTool.description, issues_1.getTransitionsTool.parameters, createAuthenticatedHandler(issues_1.getTransitionsTool.handler));
