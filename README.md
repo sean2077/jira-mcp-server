@@ -174,13 +174,15 @@ TEST_PROJECT_KEY=MYPROJECT    # Optional
 TEST_ISSUE_KEY=MYPROJECT-1    # Optional
 ```
 
+Development dependency note: Vitest 3 can resolve Vite 5, 6, or 7. This project keeps a direct `vite@^6.4.2` dev dependency so the test tree stays on a secure Vite line that still supports Node 18.
+
 ## Compatibility
 
 | Platform | Version | Status |
 |----------|---------|--------|
 | Jira Server | 8.x+ | ✅ Tested on 8.1 |
 | Jira Cloud | - | ✅ Supported |
-| Node.js | 18.x+ | ✅ Required |
+| Node.js | 18.14.1+ | ✅ Required |
 
 ## Comparison with Alternatives
 
