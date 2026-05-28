@@ -36,7 +36,7 @@ exports.getProjectDetailsTool = {
     description: api_1.TOOLS_CONFIG.projects.details.description,
     parameters: {
         projectKey: zod_1.z.string().describe("Project key (e.g., 'COS')"),
-        cloudId: zod_1.z.string().describe("valid jira cloud id.")
+        cloudId: zod_1.z.string().optional().describe("Cloud ID for OAuth Cloud mode; not used for Jira Server")
     },
     handler: async ({ projectKey, cloudId }) => {
         try {
@@ -65,13 +65,12 @@ exports.getProjectUsersTool = {
     parameters: {
         projectKey: zod_1.z.string().describe("comma separated list of project keys to get users for"),
         maxResults: zod_1.z.number().optional().default(50).describe("Maximum number of results to return (default: 50, max: 100)"),
-        cloudId: zod_1.z.string().describe("valid jira cloud id")
+        cloudId: zod_1.z.string().optional().describe("Cloud ID for OAuth Cloud mode; not used for Jira Server")
     },
     handler: async ({ projectKey, maxResults, cloudId }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
             const users = await jiraApi.getProjectUsers(cloudId, projectKey, maxResults);
-            console.log("users", users);
             return {
                 content: [{
                         type: "text",

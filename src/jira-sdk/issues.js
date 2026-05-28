@@ -4,7 +4,7 @@ exports.JiraIssuesService = void 0;
 exports.createIssuesService = createIssuesService;
 const api_1 = require("../config/api");
 const index_1 = require("../config/index");
-const bulk_operations_1 = require("../tools/bulk-operations");
+const debug_log_1 = require("../utils/debug-log");
 class JiraIssuesService {
     baseUrl;
     headers;
@@ -176,7 +176,7 @@ class JiraIssuesService {
         // Cap pageSize to prevent oversized responses
         const maxPageSize = 100;
         pageSize = Math.min(pageSize, maxPageSize);
-        (0, bulk_operations_1.debugLog)("searchIssues", minimalFields);
+        (0, debug_log_1.debugLog)("searchIssues", minimalFields);
         const fields = minimalFields
             ? "summary,status,priority,created,updated,assignee,project"
             : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
@@ -185,9 +185,9 @@ class JiraIssuesService {
         const expand = "";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}${expand}&fields=${fields}`);
-        (0, bulk_operations_1.debugLog)("url", url);
+        (0, debug_log_1.debugLog)("url", url);
         const response = await this.fetchJson(url);
-        (0, bulk_operations_1.debugLog)("response", response);
+        (0, debug_log_1.debugLog)("response", response);
         const rawIssues = response.issues || [];
         return {
             issues: raw
@@ -242,7 +242,6 @@ class JiraIssuesService {
     //       break;
     //     }
     //   }
-    //   console.log(allIssues?.length, 'allIssues');
     //   return {
     //     issues: getAllResults ? allIssues : allIssues.slice(0, maxResults),
     //     total: totalResults,

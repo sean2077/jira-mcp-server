@@ -73,7 +73,6 @@ class JiraMetadataService {
             // Jira Cloud uses external API with cloudId
             url = (0, api_1.getJiraExternalApiUrl)(cloudId, `issuetype?projectId=${projectKey}`);
         }
-        console.log('url in issue types', url);
         const response = await this.fetchJson(url);
         return (response || []).map((issueType) => ({
             id: issueType.id,

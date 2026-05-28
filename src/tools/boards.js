@@ -8,12 +8,14 @@ exports.getBoardsTool = {
     name: api_1.TOOLS_CONFIG.boards.list.name,
     description: api_1.TOOLS_CONFIG.boards.list.description,
     parameters: {
-        cloudId: zod_1.z.string().optional().describe("Cloud ID if different from default")
+        projectKeyOrId: zod_1.z.string().optional().describe("Optional project key or ID to filter boards"),
+        type: zod_1.z.enum(["scrum", "kanban"]).optional().describe("Optional board type filter"),
+        maxResults: zod_1.z.number().optional().default(50).describe("Maximum number of boards to return")
     },
-    handler: async ({ cloudId }) => {
+    handler: async ({ projectKeyOrId, type, maxResults = 50 }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            const boards = await jiraApi.getBoards(cloudId);
+            const boards = await jiraApi.getBoards(projectKeyOrId, type, maxResults);
             return {
                 content: [{
                         type: "text",
@@ -37,12 +39,12 @@ exports.getSprintsTool = {
     parameters: {
         boardId: zod_1.z.number().describe("Board ID to get sprints for"),
         state: zod_1.z.enum(["active", "closed", "future"]).optional().describe("Filter sprints by state"),
-        cloudId: zod_1.z.string().optional().describe("valid jira cloud id. get it using jira_get_cloud_id tool")
+        maxResults: zod_1.z.number().optional().default(50).describe("Maximum number of sprints to return")
     },
-    handler: async ({ boardId, state, cloudId }) => {
+    handler: async ({ boardId, state, maxResults = 50 }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            const sprints = await jiraApi.getSprints(boardId, state, cloudId);
+            const sprints = await jiraApi.getSprints(boardId, state, maxResults);
             return {
                 content: [{
                         type: "text",

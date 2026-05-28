@@ -4,6 +4,7 @@ exports.batchSearchIssuesTool = exports.manageWatchersTool = exports.getWatchers
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
 const api_1 = require("../config/api");
+const config_1 = require("../config");
 exports.searchIssuesTool = {
     name: api_1.TOOLS_CONFIG.issues.search.name,
     description: api_1.TOOLS_CONFIG.issues.search.description,
@@ -64,7 +65,6 @@ exports.getIssueTool = {
             };
         }
         catch (error) {
-            console.error('Error fetching JIRA issue:', error);
             return {
                 content: [{
                         type: "text",
@@ -83,7 +83,7 @@ exports.createIssueTool = {
         description: zod_1.z.string().optional().describe("Issue description"),
         issueType: zod_1.z.string().describe("Issue type (e.g., 'Task', 'Bug', 'Story')"),
         priority: zod_1.z.string().optional().describe("Issue priority"),
-        assigneeAccountId: zod_1.z.string().optional().describe("Account ID of the assignee"),
+        assigneeAccountId: zod_1.z.string().optional().describe("Jira Server username or Jira Cloud account ID of the assignee"),
         cloudId: zod_1.z.string().optional().describe("valid jira cloud id. get it using jira_get_cloud_id tool")
     },
     handler: async ({ projectKey, summary, description, issueType, priority, assigneeAccountId }) => {
@@ -100,7 +100,9 @@ exports.createIssueTool = {
                 params.priority = { name: priority };
             }
             if (assigneeAccountId) {
-                params.assignee = { name: assigneeAccountId };
+                params.assignee = config_1.config.jira.type === 'server'
+                    ? { name: assigneeAccountId }
+                    : { accountId: assigneeAccountId };
             }
             const issue = await jiraApi.createIssue(params);
             return {

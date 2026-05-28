@@ -36,6 +36,23 @@ function getBearerToken() {
  * Extract bearer token from request headers
  */
 function extractBearerToken(headers = {}) {
+    const getHeader = (name) => {
+        if (!headers) {
+            return undefined;
+        }
+        if (typeof headers.get === "function") {
+            return headers.get(name) || headers.get(name.toLowerCase());
+        }
+        return headers[name] || headers[name.toLowerCase()];
+    };
+    const authHeader = getHeader("Authorization");
+    if (typeof authHeader === "string" && authHeader.startsWith(config_1.config.constants.authHeaderPrefix)) {
+        return authHeader.substring(config_1.config.constants.authHeaderPrefix.length);
+    }
+    const jiraTokenHeader = getHeader(config_1.config.constants.jiraTokenHeader);
+    if (typeof jiraTokenHeader === "string") {
+        return jiraTokenHeader;
+    }
     // Check if token is in environment as fallback
     const envConfig = (0, config_1.getEnvironmentConfig)();
     if (envConfig.bearerToken) {
@@ -84,12 +101,8 @@ function parseCredentials(token) {
  * Initialize authentication from headers and set context
  */
 function initializeAuth(headers = {}) {
-    // console.log("headers **********", headers);
     const token = extractBearerToken(headers);
-    if (token) {
-        // Set the credentials in the async local storage context
-        setBearerToken(token);
-    }
+    setBearerToken(token);
 }
 // Helper function to get JIRA base URL from OAuth session
 async function getJiraBaseUrlFromSession(accessToken) {
@@ -139,8 +152,8 @@ async function createAuthenticatedJiraServices() {
     if (_cachedServices && _cachedToken === token) {
         return _cachedServices;
     }
-    // Use OAuth for Cloud, Basic Auth for Server
-    const isOauth = config_1.config.jira.type !== 'server';
+    // Cloud supports OAuth bearer tokens and direct-site Basic Auth email:token credentials.
+    const isOauth = config_1.config.jira.type !== 'server' && !token?.includes(':');
     _cachedServices = await createJiraServices(isOauth, token || '');
     _cachedToken = token;
     return _cachedServices;
@@ -151,7 +164,7 @@ async function createAuthenticatedJiraService() {
     // Create a composite service that maintains the old interface
     return {
         // Issues methods
-        searchIssues: (searchString, maxResults, minimalFields, startAt) => services.issues.searchIssues(searchString, maxResults, minimalFields, startAt),
+        searchIssues: (searchString, maxResults, minimalFields, startAt, raw) => services.issues.searchIssues(searchString, maxResults, minimalFields, startAt, raw),
         getIssueWithComments: (issueId, maxComments) => services.issues.getIssueWithComments(issueId, maxComments),
         createIssue: (params) => {
             const { projectKey, issueType, summary, description, ...fields } = params;
@@ -201,15 +214,6 @@ async function createAuthenticatedJiraService() {
 }
 // Helper function to extract meaningful error messages
 const extractErrorMessage = (error) => {
-    console.log('Error object:', {
-        name: error.name,
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        hasResponse: !!error.response,
-        responseData: error.response?.data,
-        responseStatus: error.response?.status
-    });
     // Handle Axios errors specifically
     if (error.name === 'AxiosError' || error.isAxiosError) {
         // Check if we have a response with error details

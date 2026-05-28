@@ -1,41 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bulkProjectProductivityTool = exports.bulkUserProductivityTool = void 0;
-exports.debugLog = debugLog;
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
-// Debug logging (only in local development)
-// Add file and push logs 
-function debugLog(message, data) {
-    const timestamp = new Date().toISOString();
-    try {
-        // // Ensure the directory exists
-        // if (!fs.existsSync(logDir)) {
-        //   fs.mkdirSync(logDir, { recursive: true });
-        // }
-        // // Write to file
-        // if (data) {
-        //   fs.appendFileSync(logFile, `[CLOCKIFY-MCP-DEBUG] [${timestamp}] ${message} ${JSON.stringify(data, null, 2)}\n`);
-        // } else {
-        //   fs.appendFileSync(logFile, `[CLOCKIFY-MCP-DEBUG] [${timestamp}] ${message}\n`);
-        // }
-    }
-    catch (error) {
-        // Fallback to console if file writing fails
-        console.log(`[CLOCKIFY-MCP-DEBUG] [${timestamp}] ${message}`, data || '');
-        console.error('Failed to write to log file:', error);
-    }
-}
+const debug_log_1 = require("../utils/debug-log");
 // Cache for bulk operations
 const bulkCache = new Map();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes - increased for better performance
+const BULK_PAGE_SIZE = 100;
+const MAX_BULK_ISSUES = 10000;
 function getCacheKey(prefix, params) {
     // Create normalized cache key for better consistency
     const normalizedParams = {
-        users: Array.isArray(params.users) ? params.users.sort() : params.users,
+        users: Array.isArray(params.users) ? [...params.users].sort() : params.users,
         startDate: params.startDate,
         endDate: params.endDate,
-        projectKeys: Array.isArray(params.projectKeys) ? params.projectKeys.sort() : params.projectKeys,
+        projectKeys: Array.isArray(params.projectKeys) ? [...params.projectKeys].sort() : params.projectKeys,
         aggregateBy: params.aggregateBy || 'user',
         includeCorrelation: Boolean(params.includeCorrelation),
         cloudId: params.cloudId
@@ -65,6 +45,37 @@ function setCache(key, data) {
 function getCache(key) {
     return bulkCache.get(key)?.data;
 }
+function markCachedResult(result) {
+    if (result && typeof result === "object" && !Array.isArray(result)) {
+        return {
+            ...result,
+            metadata: {
+                ...(result.metadata || {}),
+                cached: true,
+            },
+        };
+    }
+    return result;
+}
+async function searchAllIssues(jiraApi, jql) {
+    let startAt = 0;
+    let total = 0;
+    const allIssues = [];
+    let hasNextPage = true;
+    while (hasNextPage && startAt < MAX_BULK_ISSUES) {
+        const page = await jiraApi.searchIssues(jql, BULK_PAGE_SIZE, false, startAt, true);
+        const pageIssues = page?.issues || [];
+        allIssues.push(...pageIssues);
+        total = page?.total || allIssues.length;
+        startAt += BULK_PAGE_SIZE;
+        hasNextPage = Boolean(page?.hasNextPage);
+    }
+    return {
+        issues: allIssues,
+        total,
+        truncated: hasNextPage,
+    };
+}
 // Bulk user productivity analysis
 exports.bulkUserProductivityTool = {
     name: "jira_bulk_user_analytics",
@@ -75,15 +86,13 @@ exports.bulkUserProductivityTool = {
         endDate: zod_1.z.string().describe("End date in YYYY-MM-DD format"),
         includeCorrelation: zod_1.z.boolean().optional().default(true).describe("Include correlation data for cross-platform analysis"),
         aggregateBy: zod_1.z.enum(['user', 'project', 'sprint']).optional().default('user').describe("How to aggregate the results"),
-        cloudId: zod_1.z.string().describe("valid jira cloud id."),
+        cloudId: zod_1.z.string().optional().describe("Cloud ID for OAuth Cloud mode; not used for Jira Server"),
     },
     handler: async (params) => {
         try {
             const cacheKey = getCacheKey('bulk_user_productivity', params);
             if (isValidCache(cacheKey)) {
-                const cachedResult = getCache(cacheKey);
-                // Mark as cached result
-                cachedResult.metadata.cached = true;
+                const cachedResult = markCachedResult(getCache(cacheKey));
                 return {
                     content: [{
                             type: "text",
@@ -98,11 +107,11 @@ exports.bulkUserProductivityTool = {
             if (params.projectKeys && params.projectKeys.length > 0) {
                 jql += ` AND project IN (${params.projectKeys.join(',')})`;
             }
-            debugLog('JQL Query:', jql);
-            debugLog('Cloud ID:', params.cloudId);
-            debugLog('Users to search:', params.users);
-            const issues = await jiraApi.searchIssues(jql, 100, false, 0, true);
-            debugLog(`Total issues found: ${issues?.total || 0}`);
+            (0, debug_log_1.debugLog)('JQL Query:', jql);
+            (0, debug_log_1.debugLog)('Cloud ID:', params.cloudId);
+            (0, debug_log_1.debugLog)('Users to search:', params.users);
+            const issues = await searchAllIssues(jiraApi, jql);
+            (0, debug_log_1.debugLog)(`Total issues found: ${issues?.total || 0}`);
             // Process data for each user - optimized for performance
             const userAnalytics = params.users.map(userId => {
                 const userIssues = issues?.issues?.filter((issue) => {
@@ -147,7 +156,7 @@ exports.bulkUserProductivityTool = {
                         projectKeys: [...new Set(userIssues.map((i) => i.fields?.project?.key).filter(Boolean))]
                     } : null
                 };
-            });
+            }).filter(Boolean);
             // Generate essential team summary
             const teamSummary = {
                 totalUsers: userAnalytics.length,
@@ -163,7 +172,9 @@ exports.bulkUserProductivityTool = {
                     cached: false,
                     generatedAt: new Date().toISOString(),
                     totalIssuesFound: issues?.total || 0,
-                    usersAnalyzed: params.users.length
+                    issuesAnalyzed: issues?.issues?.length || 0,
+                    usersAnalyzed: params.users.length,
+                    truncated: issues?.truncated || false
                 }
             };
             setCache(cacheKey, result);
@@ -194,15 +205,13 @@ exports.bulkProjectProductivityTool = {
         includeCorrelation: zod_1.z.boolean().optional().default(true).describe("Include correlation data for cross-platform analysis"),
         projectKeys: zod_1.z.array(zod_1.z.string()).describe("array of project keys to filter by"),
         aggregateBy: zod_1.z.enum(['user', 'project', 'sprint']).optional().default('project').describe("How to aggregate the results"),
-        cloudId: zod_1.z.string().describe("valid jira cloud id."),
+        cloudId: zod_1.z.string().optional().describe("Cloud ID for OAuth Cloud mode; not used for Jira Server"),
     },
     handler: async (params) => {
         try {
             const cacheKey = getCacheKey('bulk_project_productivity', params);
             if (isValidCache(cacheKey)) {
-                const cachedResult = getCache(cacheKey);
-                // Mark as cached result
-                cachedResult.metadata.cached = true;
+                const cachedResult = markCachedResult(getCache(cacheKey));
                 return {
                     content: [{
                             type: "text",
@@ -216,16 +225,15 @@ exports.bulkProjectProductivityTool = {
             if (params.projectKeys && params.projectKeys.length > 0) {
                 jql += ` AND project IN (${params.projectKeys.join(',')})`;
             }
-            debugLog('JQL Query:', jql);
-            debugLog('Cloud ID:', params.cloudId);
-            debugLog('Users to search:', params.users);
-            const issues = await jiraApi.searchIssues(jql, 100, false, 0, true);
-            debugLog(`Total issues found: ${issues?.total || 0}`);
-            debugLog("issues", issues?.issues);
+            (0, debug_log_1.debugLog)('JQL Query:', jql);
+            (0, debug_log_1.debugLog)('Cloud ID:', params.cloudId);
+            const issues = await searchAllIssues(jiraApi, jql);
+            (0, debug_log_1.debugLog)(`Total issues found: ${issues?.total || 0}`);
+            (0, debug_log_1.debugLog)("issues", issues?.issues);
             // Filter the issues by projectKeys
             // Filter the issues by projectKeys and return the issue counts and assignee information 
             const projectAnalytics = params.projectKeys?.map((projectKey) => {
-                const projectIssues = issues?.issues?.filter((issue) => issue.fields?.project?.key === projectKey);
+                const projectIssues = (issues?.issues || []).filter((issue) => issue.fields?.project?.key === projectKey);
                 // skip the project if not found in the issues
                 if (projectIssues.length === 0) {
                     return null;
@@ -247,13 +255,24 @@ exports.bulkProjectProductivityTool = {
                     issueCount: projectIssues?.length || 0,
                     issues: essentialIssues
                 };
-            });
-            debugLog("projectAnalytics", projectAnalytics);
-            setCache(cacheKey, projectAnalytics);
+            }).filter(Boolean);
+            const result = {
+                projects: projectAnalytics,
+                metadata: {
+                    cached: false,
+                    generatedAt: new Date().toISOString(),
+                    totalIssuesFound: issues?.total || 0,
+                    issuesAnalyzed: issues?.issues?.length || 0,
+                    projectsAnalyzed: params.projectKeys.length,
+                    truncated: issues?.truncated || false
+                }
+            };
+            (0, debug_log_1.debugLog)("projectAnalytics", result);
+            setCache(cacheKey, result);
             return {
                 content: [{
                         type: "text",
-                        text: JSON.stringify(projectAnalytics)
+                        text: JSON.stringify(result)
                     }],
             };
         }

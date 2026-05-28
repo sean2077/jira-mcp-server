@@ -73,7 +73,6 @@ class JiraProjectsService {
             // Jira Cloud uses external API with cloudId
             url = (0, api_1.getJiraExternalApiUrl)(cloudId, `project/search?maxResults=${maxResults}`);
         }
-        console.log('url', url);
         const response = await this.fetchJson(url);
         // Server returns array directly, Cloud returns { values: [...] }
         const projects = Array.isArray(response) ? response : (response.values || []);

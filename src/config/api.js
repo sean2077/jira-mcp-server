@@ -170,11 +170,11 @@ function createJiraApiHeaders(token, isOauth = false) {
     }
     else {
         // For basic auth with email:token
-        const [email, apiToken] = token.split(':');
-        if (!email || !apiToken) {
+        const separatorIndex = token.indexOf(':');
+        if (separatorIndex <= 0 || separatorIndex === token.length - 1) {
             throw new Error('Token must be in format email:api_token for basic auth');
         }
-        const basicAuth = btoa(`${email}:${apiToken}`);
+        const basicAuth = Buffer.from(token, "utf8").toString("base64");
         return new Headers({
             Authorization: `Basic ${basicAuth}`,
             Accept: "application/json",
@@ -196,6 +196,9 @@ function getJiraAgileApiUrl(baseUrl, endpoint) {
     return `${cleanBaseUrl}/rest/agile/1.0/${cleanEndpoint}`;
 }
 function getJiraExternalApiUrl(cloudId, endpoint) {
+    if (!cloudId) {
+        throw new Error("cloudId is required for Jira Cloud API gateway requests. Use jira_get_cloud_id with an OAuth token first.");
+    }
     const cleanEndpoint = endpoint.replace(/^\//, '');
     return `${index_1.config.constants.jiraExternalBaseUrl}${cloudId}/rest/api/3/${cleanEndpoint}`;
 }

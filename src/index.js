@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.createAuthenticatedHandler = createAuthenticatedHandler;
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -17,6 +18,7 @@ const projects_1 = require("./tools/projects");
 const users_1 = require("./tools/users");
 const metadata_1 = require("./tools/metadata");
 const boards_1 = require("./tools/boards");
+const resources_1 = require("./tools/resources");
 // Import new bulk operations tools
 const bulk_operations_1 = require("./tools/bulk-operations");
 // Load environment variables
@@ -25,11 +27,14 @@ dotenv_1.default.config();
 const server = new mcp_js_1.McpServer(api_1.SERVER_CONFIG);
 // Helper function to create authenticated tool handler
 function createAuthenticatedHandler(toolHandler) {
-    return async (params, context) => {
+    return async (params, context = {}) => {
         // Initialize authentication from request context/headers
-        (0, auth_1.initializeAuth)();
+        const headers = context?.requestInfo?.headers || context?.request?.headers || context?.headers || {};
+        (0, auth_1.initializeAuth)(headers);
         try {
-            return await toolHandler(params);
+            const result = await toolHandler(params);
+            const errorText = result?.content?.some((item) => item?.type === "text" && typeof item.text === "string" && item.text.startsWith("Error"));
+            return errorText ? { ...result, isError: true } : result;
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -85,16 +90,12 @@ server.tool(metadata_1.getWorkflowsTool.name, metadata_1.getWorkflowsTool.descri
 server.tool(boards_1.getBoardsTool.name, boards_1.getBoardsTool.description, boards_1.getBoardsTool.parameters, createAuthenticatedHandler(boards_1.getBoardsTool.handler));
 server.tool(boards_1.getSprintsTool.name, boards_1.getSprintsTool.description, boards_1.getSprintsTool.parameters, createAuthenticatedHandler(boards_1.getSprintsTool.handler));
 // Register Resources tools
-// server.tool(
-//     getAtlassianResourcesTool.name,
-//     getAtlassianResourcesTool.description,
-//     getAtlassianResourcesTool.parameters,
-//     createAuthenticatedHandler(getAtlassianResourcesTool.handler)
-// );
+server.tool(resources_1.getAtlassianResourcesTool.name, resources_1.getAtlassianResourcesTool.description, resources_1.getAtlassianResourcesTool.parameters, createAuthenticatedHandler(resources_1.getAtlassianResourcesTool.handler));
 // Register NEW BULK OPERATIONS TOOLS
 server.tool(bulk_operations_1.bulkUserProductivityTool.name, bulk_operations_1.bulkUserProductivityTool.description, bulk_operations_1.bulkUserProductivityTool.parameters, createAuthenticatedHandler(bulk_operations_1.bulkUserProductivityTool.handler));
 server.tool(bulk_operations_1.bulkProjectProductivityTool.name, bulk_operations_1.bulkProjectProductivityTool.description, bulk_operations_1.bulkProjectProductivityTool.parameters, createAuthenticatedHandler(bulk_operations_1.bulkProjectProductivityTool.handler));
-server.tool(users_1.offboardEmployeeTool.name, users_1.offboardEmployeeTool.description, users_1.offboardEmployeeTool.parameters, createAuthenticatedHandler(users_1.offboardEmployeeTool.handler));
+// jira_offboard_employee is intentionally not registered: the implementation is
+// a non-operational placeholder and must not advertise administrative success.
 // server.tool(
 //     teamPerformanceCorrelationTool.name,
 //     teamPerformanceCorrelationTool.description,
@@ -117,24 +118,17 @@ server.tool(users_1.offboardEmployeeTool.name, users_1.offboardEmployeeTool.desc
 async function main() {
     try {
         const transport = new stdio_js_1.StdioServerTransport();
-        // console.log("🔌 Connecting Enhanced JIRA MCP server to stdio transport...");
         // Connect server to transport
         await server.connect(transport);
-        // console.log("✅ Enhanced JIRA MCP server connected successfully!");
-        // console.log("🚀 New bulk operations tools available:");
-        // console.log("   - jira_bulk_user_productivity");
-        // console.log("   - jira_team_performance_correlation");
-        // console.log("   - jira_multi_user_workload");
-        // console.log("   - jira_project_user_contributions");
-        // console.log("🎯 Transport: STDIO (Compatible with Claude Desktop)");
-        // console.log("💡 These tools are optimized for complex team analytics queries");
     }
     catch (error) {
         console.error("❌ Failed to start Enhanced JIRA MCP server:", error);
         process.exit(1);
     }
 }
-main().catch((error) => {
-    console.error("Server error:", error);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch((error) => {
+        console.error("Server error:", error);
+        process.exit(1);
+    });
+}

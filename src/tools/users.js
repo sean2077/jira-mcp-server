@@ -48,6 +48,7 @@ exports.lookupJiraAccountIdTool = {
             .describe("The display name or email address of the user to lookup."),
         cloudId: zod_1.z
             .string()
+            .optional()
             .describe("valid jira cloud id. get it using jira_get_cloud_id tool"),
     },
     handler: async ({ searchString, cloudId, }) => {
@@ -82,6 +83,7 @@ exports.getCurrentUserTool = {
     parameters: {
         cloudId: zod_1.z
             .string()
+            .optional()
             .describe("valid jira cloud id. get it using jira_get_cloud_id tool"),
     },
     handler: async ({ cloudId }) => {
@@ -109,41 +111,6 @@ exports.getCurrentUserTool = {
         }
     },
 };
-// Dummy data for JIRA offboarding
-const DUMMY_JIRA_OFFBOARD_DATA = {
-    offboardedUsers: [
-        {
-            accountId: "5c7e89b1e4b2f1c3d4e5f6a7",
-            displayName: "syamasundararao",
-            emailAddress: "syama@aot-technologies.com",
-            status: "offboarded",
-            offboardDate: "2024-01-10T09:15:00Z",
-            issuesReassigned: 12,
-            projectsRemoved: ["cosmogence"],
-            lastActivity: "2025-08-06T18:30:00Z",
-            finalReport: {
-                totalIssuesCreated: 45,
-                totalIssuesResolved: 38,
-                averageResolutionTime: "2.3 days",
-            },
-        },
-        // {
-        //   accountId: "5c7e89b1e4b2f1c3d4e5f6a8",
-        //   displayName: "Lisa Rodriguez",
-        //   emailAddress: "lisa.rodriguez@company.com",
-        //   status: "offboarded",
-        //   offboardDate: "2024-01-25T11:45:00Z",
-        //   issuesReassigned: 8,
-        //   projectsRemoved: ["PROJ4", "PROJ5"],
-        //   lastActivity: "2024-01-24T16:15:00Z",
-        //   finalReport: {
-        //     totalIssuesCreated: 32,
-        //     totalIssuesResolved: 29,
-        //     averageResolutionTime: "1.8 days"
-        //   }
-        // }
-    ],
-};
 exports.offboardEmployeeTool = {
     name: api_1.TOOLS_CONFIG.users.offboard.name,
     description: api_1.TOOLS_CONFIG.users.offboard.description,
@@ -151,6 +118,7 @@ exports.offboardEmployeeTool = {
         accountId: zod_1.z.string().describe("Account ID of the user to offboard"),
         cloudId: zod_1.z
             .string()
+            .optional()
             .describe("JIRA cloud ID - get using jira_get_cloud_id tool"),
         reassignIssues: zod_1.z
             .boolean()
@@ -173,42 +141,15 @@ exports.offboardEmployeeTool = {
             .optional()
             .describe("Whether to deactivate the user account"),
     },
-    handler: async ({ accountId, cloudId, reassignIssues = true, replacementAccountId, removeFromProjects = true, generateReport = true, deactivateAccount = true, }) => {
-        try {
-            // Add to dummy offboarded users list
-            const newOffboardedUser = {
-                // accountId: "5c7e89b1e4b2f1c3d4e5f6a7",
-                // displayName: "syamasundararao",
-                // emailAddress: "syama@aot-technologies.com",
-                status: "offboarded",
-                offboardDate: "2025-08-18",
-                issuesReassigned: 12,
-                projectsRemoved: ["cosmogence"],
-                lastActivity: "2025-08-18",
-                finalReport: {
-                    totalIssuesCreated: 45,
-                    totalIssuesResolved: 38,
-                    averageResolutionTime: "2.3 days",
+    handler: async () => {
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: "jira_offboard_employee is not implemented and is not registered by default. Use explicit Jira administration workflows for account deactivation, project access removal, and issue reassignment.",
                 },
-            };
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `JIRA Employee Offboarding Completed Successfully!\n\n${JSON.stringify(newOffboardedUser)}\n\nOffboarded Users Registry:\n${JSON.stringify(DUMMY_JIRA_OFFBOARD_DATA.offboardedUsers.slice(-3))}`,
-                    },
-                ],
-            };
-        }
-        catch (error) {
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `Error during JIRA employee offboarding: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    },
-                ],
-            };
-        }
+            ],
+            isError: true,
+        };
     },
 };
