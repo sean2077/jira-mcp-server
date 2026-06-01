@@ -164,7 +164,7 @@ async function createAuthenticatedJiraService() {
     // Create a composite service that maintains the old interface
     return {
         // Issues methods
-        searchIssues: (searchString, maxResults, minimalFields, startAt, raw) => services.issues.searchIssues(searchString, maxResults, minimalFields, startAt, raw),
+        searchIssues: (searchString, maxResults, minimalFields, startAt, raw, fields) => services.issues.searchIssues(searchString, maxResults, minimalFields, startAt, raw, fields),
         getIssueWithComments: (issueId, maxComments) => services.issues.getIssueWithComments(issueId, maxComments),
         createIssue: (params) => {
             const { projectKey, issueType, summary, description, ...fields } = params;

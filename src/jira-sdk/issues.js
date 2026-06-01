@@ -172,23 +172,30 @@ class JiraIssuesService {
             updated: issue.fields?.updated,
         };
     }
-    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0, raw = false) {
+    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0, raw = false, fieldsOverride = null) {
         // Cap pageSize to prevent oversized responses
         const maxPageSize = 100;
         pageSize = Math.min(pageSize, maxPageSize);
         (0, debug_log_1.debugLog)("searchIssues", minimalFields);
-        const fields = minimalFields
-            ? "summary,status,priority,created,updated,assignee,project"
-            : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
+        // Callers may request an explicit field set (e.g. analytics needs customfield_10016 /
+        // resolutiondate); otherwise fall back to the minimal/standard presets.
+        const fields = fieldsOverride
+            ? fieldsOverride
+            : minimalFields
+                ? "summary,status,priority,created,updated,assignee,project"
+                : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
         // Skip changelog and heavy fields (comment, worklog) to reduce response size
         // Use getIssueWithComments() for full issue details with comments
-        const expand = "";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}${expand}&fields=${fields}`);
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&fields=${fields}`);
         (0, debug_log_1.debugLog)("url", url);
         const response = await this.fetchJson(url);
         (0, debug_log_1.debugLog)("response", response);
         const rawIssues = response.issues || [];
+        // Determine hasNextPage from the count actually returned, not the requested pageSize:
+        // Jira Server caps maxResults per instance, so trusting the request size would report
+        // (and skip to) pages that the server never served.
+        const effectiveStartAt = typeof response.startAt === "number" ? response.startAt : startAt;
         return {
             issues: raw
                 ? rawIssues
@@ -197,7 +204,7 @@ class JiraIssuesService {
                     : rawIssues.map(issue => this.cleanIssue(issue)),
             total: response.total || 0,
             startAt: response.startAt || 0,
-            hasNextPage: response?.total > startAt + pageSize,
+            hasNextPage: rawIssues.length > 0 && (effectiveStartAt + rawIssues.length) < (response.total || 0),
         };
     }
     // Enhanced searchIssues method with pagination support

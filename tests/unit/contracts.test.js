@@ -67,34 +67,68 @@ describe('bulk analytics', () => {
     auth.createAuthenticatedJiraService = originalCreateService;
   });
 
-  it('paginates all matching issues and requests raw Jira fields', async () => {
+  it('paginates by actual returned count and requests the analytics field set', async () => {
     const calls = [];
+    const SERVER_CAP = 50; // instance caps effective maxResults below the requested 100
+    const TOTAL = 120;
     auth.createAuthenticatedJiraService = async () => ({
-      searchIssues: async (_jql, pageSize, _minimalFields, startAt, raw) => {
-        calls.push({ pageSize, startAt, raw });
-        return {
-          issues: [makeRawIssue(`BULK-${startAt}`, 'u1', 'P1')],
-          total: 201,
-          hasNextPage: startAt < 200,
-        };
+      searchIssues: async (_jql, pageSize, _minimalFields, startAt, raw, fields) => {
+        calls.push({ pageSize, startAt, raw, fields });
+        const remaining = Math.max(0, TOTAL - startAt);
+        const count = Math.min(SERVER_CAP, remaining);
+        const issues = Array.from({ length: count }, (_, i) =>
+          makeRawIssue(`BULK-${startAt + i}`, 'u1', 'P1'));
+        return { issues, total: TOTAL, startAt, hasNextPage: startAt + count < TOTAL };
       },
     });
 
     const result = await bulkUserProductivityTool.handler({
       users: ['u1'],
-      startDate: '2026-01-01',
-      endDate: '2026-01-31',
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
       includeCorrelation: false,
     });
     const body = JSON.parse(result.content[0].text);
 
-    expect(calls).toEqual([
-      { pageSize: 100, startAt: 0, raw: true },
-      { pageSize: 100, startAt: 100, raw: true },
-      { pageSize: 100, startAt: 200, raw: true },
-    ]);
-    expect(body.users[0].metrics.totalIssues).toBe(3);
-    expect(body.metadata.issuesAnalyzed).toBe(3);
+    // advances by the count actually returned (50), so no issues are skipped
+    expect(calls.map((c) => c.startAt)).toEqual([0, 50, 100]);
+    expect(calls.every((c) => c.raw === true)).toBe(true);
+    // analytics field set must include the fields the old default omitted (the B1 fix)
+    expect(calls[0].fields).toContain('customfield_10016');
+    expect(calls[0].fields).toContain('resolutiondate');
+    expect(body.users[0].metrics.totalIssues).toBe(TOTAL);
+    expect(body.metadata.issuesAnalyzed).toBe(TOTAL);
+  });
+
+  it('escapes quotes in JQL params and rejects malformed dates', async () => {
+    let capturedJql = null;
+    let called = 0;
+    auth.createAuthenticatedJiraService = async () => ({
+      searchIssues: async (jql) => {
+        called += 1;
+        capturedJql = jql;
+        return { issues: [], total: 0, hasNextPage: false };
+      },
+    });
+
+    await bulkUserProductivityTool.handler({
+      users: ['u1" OR created > "1970-01-01'],
+      startDate: '2026-04-01',
+      endDate: '2026-04-30',
+      includeCorrelation: false,
+    });
+    // the injected quote is escaped, so it cannot break out of the quoted JQL string
+    expect(capturedJql).toContain('\\"');
+    expect(capturedJql).not.toContain('u1" OR created');
+
+    const badDate = await bulkUserProductivityTool.handler({
+      users: ['u1'],
+      startDate: 'not-a-date',
+      endDate: '2026-04-30',
+      includeCorrelation: false,
+    });
+    expect(badDate.content[0].text).toMatch(/date/i);
+    expect(called).toBe(1); // the malformed-date call never reached the search API
   });
 
   it('returns cacheable metadata for project analytics', async () => {
