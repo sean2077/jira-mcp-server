@@ -34,6 +34,20 @@ describe('jira-sdk http helper', () => {
       .rejects.toThrow(/Issue does not exist; or no permission \(Status: 404\)/);
   });
 
+  it('jiraFetchJson surfaces Jira field-level errors on a 400', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => ({ errorMessages: [], errors: { components: 'required', duedate: 'required' } }),
+    })));
+    const err = await jiraFetchJson('http://x', HEADERS, { method: 'POST' }, 1000).catch((e) => e);
+    expect(err.message).toContain('components: required');
+    expect(err.message).toContain('duedate: required');
+    expect(err.message).toContain('(Status: 400)');
+  });
+
   it('jiraFetchVoid resolves on 204 without parsing a body', async () => {
     const json = vi.fn(async () => {
       throw new Error('json() must not be called for void requests');

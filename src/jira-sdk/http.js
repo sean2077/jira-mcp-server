@@ -14,8 +14,19 @@ async function handleFetchError(response) {
     let errorData = {};
     try {
         errorData = await response.json();
-        if (Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
-            message = errorData.errorMessages.join("; ");
+        // Jira returns top-level errorMessages plus a field-level `errors` map (e.g. validation
+        // failures on create/update). Combine both so the thrown message keeps the useful detail.
+        const parts = [];
+        if (Array.isArray(errorData.errorMessages)) {
+            parts.push(...errorData.errorMessages);
+        }
+        if (errorData.errors && typeof errorData.errors === "object" && !Array.isArray(errorData.errors)) {
+            for (const [field, msg] of Object.entries(errorData.errors)) {
+                parts.push(`${field}: ${msg}`);
+            }
+        }
+        if (parts.length > 0) {
+            message = parts.join("; ");
         }
         else if (errorData.message) {
             message = errorData.message;
