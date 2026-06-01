@@ -4,7 +4,9 @@ exports.bulkProjectProductivityTool = exports.bulkUserProductivityTool = void 0;
 const zod_1 = require("zod");
 const auth_1 = require("../utils/auth");
 const debug_log_1 = require("../utils/debug-log");
-// Cache for bulk operations
+// Cache for bulk operations. Keyed only by query params, which is safe under the single-subject
+// stdio contract (one credential per process). A multi-token transport would need the auth
+// identity folded into the key (see the note in utils/auth.js).
 const bulkCache = new Map();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes - increased for better performance
 const BULK_PAGE_SIZE = 100;

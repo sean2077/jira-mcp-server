@@ -8,6 +8,10 @@ class JiraResourcesService {
     headers;
     requestTimeout = 30000;
     constructor(token, isOauth = false) {
+        // Cloud-only resource discovery: the sole authenticated call here is the OAuth
+        // accessible-resources endpoint, so Bearer auth is forced. Jira Server short-circuits in
+        // getAccessibleAtlassianResources() with a placeholder and never uses these headers, so
+        // jira_get_cloud_id is OAuth/Cloud-only by design (the isOauth arg is intentionally ignored).
         this.headers = (0, api_1.createJiraApiHeaders)(token, true);
     }
     async handleFetchError(response) {

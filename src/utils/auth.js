@@ -142,7 +142,11 @@ async function createJiraServices(isOauth, token) {
         resources: (0, resources_1.createResourcesService)(token, isOauth)
     };
 }
-// Cached services instance
+// Cached services instance.
+// NOTE: this is a single-subject server (one credential per stdio process), so a module-level
+// token + service cache is safe. If a multi-token transport (e.g. per-request HTTP auth) is ever
+// added, this cache AND the bulk-analytics cache (tools/bulk-operations.js) MUST be keyed by
+// token/session identity to avoid serving one subject's data to another.
 let _cachedServices = null;
 let _cachedToken = null;
 // Pure function to create authenticated JIRA services
