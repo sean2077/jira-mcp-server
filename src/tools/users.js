@@ -59,7 +59,7 @@ exports.lookupJiraAccountIdTool = {
                 content: [
                     {
                         type: "text",
-                        text: `Atlassian Resources: ${JSON.stringify(resources)}`,
+                        text: `Account lookup results: ${JSON.stringify(resources)}`,
                     },
                 ],
             };

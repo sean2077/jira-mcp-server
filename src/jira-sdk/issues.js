@@ -207,54 +207,6 @@ class JiraIssuesService {
             hasNextPage: rawIssues.length > 0 && (effectiveStartAt + rawIssues.length) < (response.total || 0),
         };
     }
-    // Enhanced searchIssues method with pagination support
-    // async searchIssues(
-    //   searchString: string,
-    //   maxResults: number = 100,
-    //   getAllResults: boolean = true,
-    //   minimalFields: boolean = false
-    // ): Promise<SearchIssuesResponse> {
-    //  // Use minimal fields for better performance
-    //  const fields = minimalFields
-    //  ? 'summary,status,created,updated,assignee'
-    //  : 'summary,assignee,status,created,updated,comment,description,timetracking,worklog';
-    //  const pageSize = Math.min(maxResults, 100); // JIRA API typically limits to 100 per request
-    //   let allIssues: CleanJiraIssue[] = [];
-    //   let startAt = 0;
-    //   let totalResults = 0;
-    //   let hasMoreResults = true;
-    //   while (hasMoreResults) {
-    //     const url = getJiraApiUrl(
-    //       this.baseUrl,
-    //       `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`
-    //     );
-    //     const response = await this.fetchJson<any>(url);
-    //     // Clean and add issues from this page
-    //     const cleanedIssues = response.issues?.map((issue: any) => this.cleanIssue(issue)) || [];
-    //     allIssues = allIssues.concat(cleanedIssues);
-    //     // Update pagination info
-    //     totalResults = response.total || 0;
-    //     startAt += pageSize;
-    //     // Determine if we should continue
-    //     if (getAllResults) {
-    //       // Continue until we have all results
-    //       hasMoreResults = allIssues.length < totalResults;
-    //     } else {
-    //       // Continue until we reach the requested maxResults or run out of results
-    //       hasMoreResults = allIssues.length < maxResults && allIssues.length < totalResults;
-    //     }
-    //     // Safety check to prevent infinite loops
-    //     if (startAt > 10000) { // JIRA typically has a limit around 10k results
-    //       console.warn('Reached maximum pagination limit (10,000 results). Some results may be missing.');
-    //       break;
-    //     }
-    //   }
-    //   return {
-    //     issues: getAllResults ? allIssues : allIssues.slice(0, maxResults),
-    //     total: totalResults,
-    //     startAt: 0,
-    //   };
-    // }
     async getIssueWithComments(issueId, maxComments = 50) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueId}?expand=comments,changelog,worklog&fields=*all&maxResults=${maxComments}`);
         const issue = await this.fetchJson(url);
