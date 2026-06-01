@@ -163,6 +163,8 @@ exports.bulkUserProductivityTool = {
                     if (!assignee)
                         return false;
                     return assignee.accountId === userId ||
+                        assignee.name === userId ||
+                        assignee.key === userId ||
                         assignee.displayName === userId ||
                         assignee.emailAddress === userId;
                 }) || [];
@@ -181,7 +183,7 @@ exports.bulkUserProductivityTool = {
                 return {
                     userId,
                     userInfo: {
-                        accountId: userInfo.accountId,
+                        accountId: userInfo.accountId || userInfo.key || userInfo.name,
                         displayName: userInfo.displayName,
                         email: userInfo.emailAddress || null
                     },
@@ -194,7 +196,7 @@ exports.bulkUserProductivityTool = {
                         avgResolutionTime
                     },
                     correlationData: params.includeCorrelation ? {
-                        jiraAccountId: userInfo.accountId,
+                        jiraAccountId: userInfo.accountId || userInfo.key || userInfo.name,
                         jiraDisplayName: userInfo.displayName,
                         jiraEmail: userInfo.emailAddress || null,
                         projectKeys: [...new Set(userIssues.map((i) => i.fields?.project?.key).filter(Boolean))]

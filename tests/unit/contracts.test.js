@@ -132,6 +132,42 @@ describe('bulk analytics', () => {
     expect(called).toBe(1); // the malformed-date call never reached the search API
   });
 
+  it('attributes issues to Jira Server users by name/key (not just Cloud accountId)', async () => {
+    auth.createAuthenticatedJiraService = async () => ({
+      searchIssues: async () => ({
+        issues: [{
+          id: 'S-1',
+          key: 'S-1',
+          fields: {
+            summary: 's',
+            project: { key: 'P9', name: 'P9' },
+            status: { name: 'Done', statusCategory: { key: 'done' } },
+            // Jira Server shape: name/key, no accountId
+            assignee: { name: 'jdoe', key: 'jdoe', displayName: 'John Doe', emailAddress: 'jdoe@x.com' },
+            created: '2026-07-01T00:00:00.000+0000',
+            resolutiondate: '2026-07-03T00:00:00.000+0000',
+            customfield_10016: 5,
+          },
+        }],
+        total: 1,
+        hasNextPage: false,
+      }),
+    });
+
+    const result = await bulkUserProductivityTool.handler({
+      users: ['jdoe'],
+      startDate: '2026-07-01',
+      endDate: '2026-07-31',
+      includeCorrelation: false,
+    });
+    const body = JSON.parse(result.content[0].text);
+
+    expect(body.summary.totalUsers).toBe(1);
+    expect(body.users[0].metrics.totalIssues).toBe(1);
+    expect(body.users[0].metrics.storyPointsCompleted).toBe(5);
+    expect(body.users[0].userInfo.accountId).toBe('jdoe'); // falls back to name on Server
+  });
+
   it('returns cacheable metadata for project analytics', async () => {
     auth.createAuthenticatedJiraService = async () => ({
       searchIssues: async () => ({
