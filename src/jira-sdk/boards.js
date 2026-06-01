@@ -100,45 +100,6 @@ class JiraBoardsService {
             goal: sprint.goal,
         })) || [];
     }
-    async getBoardConfiguration(boardId) {
-        // Note: Using agile API endpoint for board configuration
-        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `board/${boardId}/configuration`);
-        const response = await this.fetchJson(url);
-        return {
-            id: response.id,
-            name: response.name,
-            type: response.type || 'simple',
-            filter: response.filter ? {
-                id: response.filter.id,
-                name: response.filter.name,
-                query: response.filter.query,
-            } : undefined,
-            columnConfig: response.columnConfig ? {
-                columns: response.columnConfig.columns?.map((col) => ({
-                    name: col.name,
-                    statuses: col.statuses?.map((status) => ({
-                        id: status.id,
-                        name: status.name,
-                    })) || [],
-                })) || [],
-            } : undefined,
-        };
-    }
-    async getSprintIssues(sprintId, maxResults = 100) {
-        const searchParams = new URLSearchParams();
-        searchParams.append('maxResults', maxResults.toString());
-        // Note: Using agile API endpoint for sprint issues
-        const url = (0, api_1.getJiraAgileApiUrl)(this.baseUrl, `sprint/${sprintId}/issue?${searchParams.toString()}`);
-        const response = await this.fetchJson(url);
-        return response.issues?.map((issue) => ({
-            id: issue.id,
-            key: issue.key,
-            summary: issue.fields?.summary || '',
-            status: issue.fields?.status?.name || '',
-            assignee: issue.fields?.assignee?.displayName,
-            issueType: issue.fields?.issuetype?.name || '',
-        })) || [];
-    }
     setRequestTimeout(timeout) {
         this.requestTimeout = timeout;
     }

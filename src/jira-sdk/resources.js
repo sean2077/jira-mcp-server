@@ -84,16 +84,6 @@ class JiraResourcesService {
             avatarUrl: resource.avatarUrl || '',
         }));
     }
-    async getCurrentUserInfo() {
-        const url = config_1.config.jira.oauth.endpoints.userInfo;
-        const userInfo = await this.fetchJson(url);
-        return {
-            account_id: userInfo.account_id,
-            name: userInfo.name,
-            email: userInfo.email,
-            picture: userInfo.picture,
-        };
-    }
     setRequestTimeout(timeout) {
         this.requestTimeout = timeout;
     }

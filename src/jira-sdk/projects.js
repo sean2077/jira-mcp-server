@@ -141,34 +141,6 @@ class JiraProjectsService {
             active: user.active !== false,
         }));
     }
-    async getComponents(projectKey) {
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `project/${projectKey}/components`);
-        const components = await this.fetchJson(url);
-        return components.map((comp) => ({
-            id: comp.id,
-            name: comp.name,
-            description: comp.description,
-            lead: comp.lead ? {
-                displayName: comp.lead.displayName,
-                accountId: comp.lead.accountId || comp.lead.key || comp.lead.name,
-            } : undefined,
-            assigneeType: comp.assigneeType || "PROJECT_DEFAULT",
-            isAssigneeTypeValid: comp.isAssigneeTypeValid !== false,
-        }));
-    }
-    async getVersions(projectKey) {
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `project/${projectKey}/versions`);
-        const versions = await this.fetchJson(url);
-        return versions.map((version) => ({
-            id: version.id,
-            name: version.name,
-            description: version.description,
-            archived: version.archived || false,
-            released: version.released || false,
-            startDate: version.startDate,
-            releaseDate: version.releaseDate,
-        }));
-    }
     setRequestTimeout(timeout) {
         this.requestTimeout = timeout;
     }
