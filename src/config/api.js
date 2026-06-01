@@ -10,7 +10,7 @@ const index_1 = require("./index");
 exports.SERVER_CONFIG = {
     name: index_1.config.constants.mcpServerName,
     version: index_1.config.constants.mcpServerVersion,
-    description: "A service that integrates with Jira API to manage issues, projects, and users (stateless with user-specific tokens)",
+    description: "A service that integrates with the Jira API to manage issues, projects, and users. Runs as a single-subject stdio MCP server: one set of credentials per process (Jira Server 8.x via Basic Auth, or Jira Cloud).",
     capabilities: {
         tools: {
         // listChanged: true,

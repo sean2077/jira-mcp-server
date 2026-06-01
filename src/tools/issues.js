@@ -133,11 +133,11 @@ exports.updateIssueTool = {
     handler: async ({ issueKey, fields, cloudId }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            const result = await jiraApi.updateIssue(issueKey, fields, cloudId);
+            await jiraApi.updateIssue(issueKey, fields, cloudId);
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue ${issueKey} updated successfully:\n\n${JSON.stringify(result)}`
+                        text: `JIRA Issue ${issueKey} updated successfully`
                     }],
             };
         }
@@ -190,11 +190,11 @@ exports.assignIssueTool = {
     handler: async ({ issueKey, accountId, cloudId }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            const result = await jiraApi.assignIssue(issueKey, accountId, cloudId);
+            await jiraApi.assignIssue(issueKey, accountId, cloudId);
             return {
                 content: [{
                         type: "text",
-                        text: `JIRA Issue ${issueKey} assigned successfully:\n\n${JSON.stringify(result)}`
+                        text: `JIRA Issue ${issueKey} assigned successfully`
                     }],
             };
         }

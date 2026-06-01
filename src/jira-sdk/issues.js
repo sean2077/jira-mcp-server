@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraIssuesService = void 0;
 exports.createIssuesService = createIssuesService;
 const api_1 = require("../config/api");
+const http_1 = require("./http");
 const index_1 = require("../config/index");
 const debug_log_1 = require("../utils/debug-log");
 class JiraIssuesService {
@@ -13,57 +14,8 @@ class JiraIssuesService {
         this.baseUrl = baseUrl;
         this.headers = (0, api_1.createJiraApiHeaders)(token, isOauth);
     }
-    async handleFetchError(response) {
-        if (!response.ok) {
-            let message = response.statusText;
-            let errorData = {};
-            try {
-                errorData = await response.json();
-                if (Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
-                    message = errorData.errorMessages.join("; ");
-                }
-                else if (errorData.message) {
-                    message = errorData.message;
-                }
-                else if (errorData.errorMessage) {
-                    message = errorData.errorMessage;
-                }
-            }
-            catch (e) {
-                console.warn("Could not parse JIRA error response body as JSON.");
-            }
-            const details = JSON.stringify(errorData, null, 2);
-            console.error("JIRA API Error Details:", details);
-            const errorMessage = message ? `: ${message}` : "";
-            throw new Error(`JIRA API Error${errorMessage} (Status: ${response.status})`);
-        }
-        throw new Error("Unknown error occurred during fetch operation.");
-    }
     async fetchJson(url, init) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                ...init,
-                headers: {
-                    ...Object.fromEntries(this.headers.entries()),
-                    ...(init?.headers || {}),
-                },
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            return await response.json();
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        return (0, http_1.jiraFetchJson)(url, this.headers, init, this.requestTimeout);
     }
     extractIssueMentions(content, source, commentId) {
         const mentions = [];
@@ -172,23 +124,30 @@ class JiraIssuesService {
             updated: issue.fields?.updated,
         };
     }
-    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0, raw = false) {
+    async searchIssues(searchString, pageSize = 100, minimalFields = false, startAt = 0, raw = false, fieldsOverride = null) {
         // Cap pageSize to prevent oversized responses
         const maxPageSize = 100;
         pageSize = Math.min(pageSize, maxPageSize);
         (0, debug_log_1.debugLog)("searchIssues", minimalFields);
-        const fields = minimalFields
-            ? "summary,status,priority,created,updated,assignee,project"
-            : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
+        // Callers may request an explicit field set (e.g. analytics needs customfield_10016 /
+        // resolutiondate); otherwise fall back to the minimal/standard presets.
+        const fields = fieldsOverride
+            ? fieldsOverride
+            : minimalFields
+                ? "summary,status,priority,created,updated,assignee,project"
+                : "summary,assignee,status,issuetype,priority,resolution,reporter,labels,components,fixVersions,created,updated,description,issuelinks,project";
         // Skip changelog and heavy fields (comment, worklog) to reduce response size
         // Use getIssueWithComments() for full issue details with comments
-        const expand = "";
         // Use 'search' endpoint (not 'search/jql') for Jira Server compatibility
-        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}${expand}&fields=${fields}`);
+        const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&fields=${fields}`);
         (0, debug_log_1.debugLog)("url", url);
         const response = await this.fetchJson(url);
         (0, debug_log_1.debugLog)("response", response);
         const rawIssues = response.issues || [];
+        // Determine hasNextPage from the count actually returned, not the requested pageSize:
+        // Jira Server caps maxResults per instance, so trusting the request size would report
+        // (and skip to) pages that the server never served.
+        const effectiveStartAt = typeof response.startAt === "number" ? response.startAt : startAt;
         return {
             issues: raw
                 ? rawIssues
@@ -197,57 +156,9 @@ class JiraIssuesService {
                     : rawIssues.map(issue => this.cleanIssue(issue)),
             total: response.total || 0,
             startAt: response.startAt || 0,
-            hasNextPage: response?.total > startAt + pageSize,
+            hasNextPage: rawIssues.length > 0 && (effectiveStartAt + rawIssues.length) < (response.total || 0),
         };
     }
-    // Enhanced searchIssues method with pagination support
-    // async searchIssues(
-    //   searchString: string,
-    //   maxResults: number = 100,
-    //   getAllResults: boolean = true,
-    //   minimalFields: boolean = false
-    // ): Promise<SearchIssuesResponse> {
-    //  // Use minimal fields for better performance
-    //  const fields = minimalFields
-    //  ? 'summary,status,created,updated,assignee'
-    //  : 'summary,assignee,status,created,updated,comment,description,timetracking,worklog';
-    //  const pageSize = Math.min(maxResults, 100); // JIRA API typically limits to 100 per request
-    //   let allIssues: CleanJiraIssue[] = [];
-    //   let startAt = 0;
-    //   let totalResults = 0;
-    //   let hasMoreResults = true;
-    //   while (hasMoreResults) {
-    //     const url = getJiraApiUrl(
-    //       this.baseUrl,
-    //       `search?jql=${encodeURIComponent(searchString)}&maxResults=${pageSize}&startAt=${startAt}&expand=changelog&fields=${fields}`
-    //     );
-    //     const response = await this.fetchJson<any>(url);
-    //     // Clean and add issues from this page
-    //     const cleanedIssues = response.issues?.map((issue: any) => this.cleanIssue(issue)) || [];
-    //     allIssues = allIssues.concat(cleanedIssues);
-    //     // Update pagination info
-    //     totalResults = response.total || 0;
-    //     startAt += pageSize;
-    //     // Determine if we should continue
-    //     if (getAllResults) {
-    //       // Continue until we have all results
-    //       hasMoreResults = allIssues.length < totalResults;
-    //     } else {
-    //       // Continue until we reach the requested maxResults or run out of results
-    //       hasMoreResults = allIssues.length < maxResults && allIssues.length < totalResults;
-    //     }
-    //     // Safety check to prevent infinite loops
-    //     if (startAt > 10000) { // JIRA typically has a limit around 10k results
-    //       console.warn('Reached maximum pagination limit (10,000 results). Some results may be missing.');
-    //       break;
-    //     }
-    //   }
-    //   return {
-    //     issues: getAllResults ? allIssues : allIssues.slice(0, maxResults),
-    //     total: totalResults,
-    //     startAt: 0,
-    //   };
-    // }
     async getIssueWithComments(issueId, maxComments = 50) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueId}?expand=comments,changelog,worklog&fields=*all&maxResults=${maxComments}`);
         const issue = await this.fetchJson(url);
@@ -279,52 +190,18 @@ class JiraIssuesService {
         }
 
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "PUT",
-                headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify({ fields: transformedFields }),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on successful update
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on successful update
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "PUT",
+            body: JSON.stringify({ fields: transformedFields }),
+        }, this.requestTimeout);
     }
     async deleteIssue(issueKey) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "DELETE",
-                headers: Object.fromEntries(this.headers.entries()),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on successful delete
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on successful delete
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "DELETE",
+        }, this.requestTimeout);
     }
     async getTransitions(issueKey) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/transitions`);
@@ -347,28 +224,11 @@ class JiraIssuesService {
             };
         }
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/transitions`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify(transitionData),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on successful transition
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on successful transition
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "POST",
+            body: JSON.stringify(transitionData),
+        }, this.requestTimeout);
     }
     async assignIssue(issueKey, accountId) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/assignee`);
@@ -376,28 +236,11 @@ class JiraIssuesService {
         const body = index_1.config.jira.type === 'server'
             ? { name: accountId }
             : { accountId };
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "PUT",
-                headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify(body),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on successful assign
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on successful assign
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "PUT",
+            body: JSON.stringify(body),
+        }, this.requestTimeout);
     }
     createAdfFromBody(text) {
         // Jira Server API v2 uses plain text, Jira Cloud API v3 uses ADF
@@ -447,52 +290,18 @@ class JiraIssuesService {
             };
         }
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, "issueLink");
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify(linkData),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 201 with no body on success
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 201 with no body on success
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "POST",
+            body: JSON.stringify(linkData),
+        }, this.requestTimeout);
     }
     async deleteIssueLink(linkId) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issueLink/${linkId}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "DELETE",
-                headers: Object.fromEntries(this.headers.entries()),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on success
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on success
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "DELETE",
+        }, this.requestTimeout);
     }
     async addWorklog(issueKey, timeSpent, comment, started) {
         const worklogData = {
@@ -525,53 +334,19 @@ class JiraIssuesService {
     }
     async addWatcher(issueKey, username) {
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/watchers`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: Object.fromEntries(this.headers.entries()),
-                body: JSON.stringify(username),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on success
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on success
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "POST",
+            body: JSON.stringify(username),
+        }, this.requestTimeout);
     }
     async removeWatcher(issueKey, username) {
         const paramName = index_1.config.jira.type === 'server' ? 'username' : 'accountId';
         const url = (0, api_1.getJiraApiUrl)(this.baseUrl, `issue/${issueKey}/watchers?${paramName}=${encodeURIComponent(username)}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                method: "DELETE",
-                headers: Object.fromEntries(this.headers.entries()),
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            // Jira Server returns 204 No Content on success
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        // Jira Server returns 204 No Content on success
+        await (0, http_1.jiraFetchVoid)(url, this.headers, {
+            method: "DELETE",
+        }, this.requestTimeout);
     }
     setRequestTimeout(timeout) {
         this.requestTimeout = timeout;
