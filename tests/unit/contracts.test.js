@@ -5,7 +5,7 @@ import { getBoardsTool, getSprintsTool } from '../../src/tools/boards.js';
 import { getProjectDetailsTool, getProjectUsersTool } from '../../src/tools/projects.js';
 import { getCurrentUserTool, lookupJiraAccountIdTool, offboardEmployeeTool } from '../../src/tools/users.js';
 import { bulkUserProductivityTool, bulkProjectProductivityTool } from '../../src/tools/bulk-operations.js';
-import { updateIssueTool, assignIssueTool } from '../../src/tools/issues.js';
+import { updateIssueTool, assignIssueTool, createIssueTool } from '../../src/tools/issues.js';
 
 const require = createRequire(import.meta.url);
 const auth = require('../../src/utils/auth.js');
@@ -197,6 +197,34 @@ describe('issue write tools', () => {
 
   afterEach(() => {
     auth.createAuthenticatedJiraService = originalCreateService;
+  });
+
+  it('createIssueTool passes caller-supplied fields (components/versions/duedate/custom) through', async () => {
+    let captured = null;
+    auth.createAuthenticatedJiraService = async () => ({
+      createIssue: async (params) => { captured = params; return { key: 'D1-999' }; },
+    });
+
+    const res = await createIssueTool.handler({
+      projectKey: 'D1',
+      summary: 's',
+      issueType: '任务',
+      priority: 'High',
+      fields: {
+        components: [{ id: '10003' }],
+        versions: [{ id: '10005' }],
+        duedate: '2026-06-30',
+        customfield_10001: 'x',
+      },
+    });
+
+    expect(res.content[0].text).toContain('D1-999');
+    expect(captured.components).toEqual([{ id: '10003' }]);
+    expect(captured.versions).toEqual([{ id: '10005' }]);
+    expect(captured.duedate).toBe('2026-06-30');
+    expect(captured.customfield_10001).toBe('x');
+    expect(captured.projectKey).toBe('D1'); // base params preserved
+    expect(captured.priority).toEqual({ name: 'High' }); // dedicated param still applied
   });
 
   it('update/assign success messages do not leak "undefined" for void SDK calls', async () => {

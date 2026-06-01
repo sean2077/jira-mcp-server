@@ -84,17 +84,21 @@ exports.createIssueTool = {
         issueType: zod_1.z.string().describe("Issue type (e.g., 'Task', 'Bug', 'Story')"),
         priority: zod_1.z.string().optional().describe("Issue priority"),
         assigneeAccountId: zod_1.z.string().optional().describe("Jira Server username or Jira Cloud account ID of the assignee"),
+        fields: zod_1.z.record(zod_1.z.any()).optional().describe("Additional raw Jira fields for the new issue, e.g. {\"components\":[{\"id\":\"10003\"}],\"versions\":[{\"id\":\"10005\"}],\"duedate\":\"2026-06-30\",\"customfield_10001\":\"...\"}. Some projects require components/versions/duedate. Use jira_get_project_details for component/version ids and jira_get_fields for custom field ids."),
         cloudId: zod_1.z.string().optional().describe("valid jira cloud id. get it using jira_get_cloud_id tool")
     },
-    handler: async ({ projectKey, summary, description, issueType, priority, assigneeAccountId }) => {
+    handler: async ({ projectKey, summary, description, issueType, priority, assigneeAccountId, fields }) => {
         try {
             const jiraApi = await (0, auth_1.createAuthenticatedJiraService)();
-            // Build params object for createIssue wrapper in auth.js
+            // Build params for the createIssue wrapper in auth.js. Spread caller-supplied raw
+            // fields first (components/versions/duedate/custom fields), then let the dedicated
+            // priority/assignee params take precedence.
             const params = {
                 projectKey,
                 issueType,
                 summary,
                 description,
+                ...(fields || {}),
             };
             if (priority) {
                 params.priority = { name: priority };
