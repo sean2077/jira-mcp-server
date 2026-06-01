@@ -5,6 +5,7 @@ import { getBoardsTool, getSprintsTool } from '../../src/tools/boards.js';
 import { getProjectDetailsTool, getProjectUsersTool } from '../../src/tools/projects.js';
 import { getCurrentUserTool, lookupJiraAccountIdTool, offboardEmployeeTool } from '../../src/tools/users.js';
 import { bulkUserProductivityTool, bulkProjectProductivityTool } from '../../src/tools/bulk-operations.js';
+import { updateIssueTool, assignIssueTool } from '../../src/tools/issues.js';
 
 const require = createRequire(import.meta.url);
 const auth = require('../../src/utils/auth.js');
@@ -152,6 +153,29 @@ describe('bulk analytics', () => {
     expect(first.projects[0].issueCount).toBe(1);
     expect(first.metadata.cached).toBe(false);
     expect(second.metadata.cached).toBe(true);
+  });
+});
+
+describe('issue write tools', () => {
+  const originalCreateService = auth.createAuthenticatedJiraService;
+
+  afterEach(() => {
+    auth.createAuthenticatedJiraService = originalCreateService;
+  });
+
+  it('update/assign success messages do not leak "undefined" for void SDK calls', async () => {
+    auth.createAuthenticatedJiraService = async () => ({
+      updateIssue: async () => undefined,
+      assignIssue: async () => undefined,
+    });
+
+    const updated = await updateIssueTool.handler({ issueKey: 'ABC-1', fields: { summary: 'x' } });
+    expect(updated.content[0].text).toContain('ABC-1 updated successfully');
+    expect(updated.content[0].text).not.toContain('undefined');
+
+    const assigned = await assignIssueTool.handler({ issueKey: 'ABC-1', accountId: 'u1' });
+    expect(assigned.content[0].text).toContain('ABC-1 assigned successfully');
+    expect(assigned.content[0].text).not.toContain('undefined');
   });
 });
 
