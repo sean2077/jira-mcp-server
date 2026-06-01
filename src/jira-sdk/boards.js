@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JiraBoardsService = void 0;
 exports.createBoardsService = createBoardsService;
 const api_1 = require("../config/api");
+const http_1 = require("./http");
 class JiraBoardsService {
     baseUrl;
     headers;
@@ -11,57 +12,8 @@ class JiraBoardsService {
         this.baseUrl = baseUrl;
         this.headers = (0, api_1.createJiraApiHeaders)(token, isOauth);
     }
-    async handleFetchError(response) {
-        if (!response.ok) {
-            let message = response.statusText;
-            let errorData = {};
-            try {
-                errorData = await response.json();
-                if (Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
-                    message = errorData.errorMessages.join("; ");
-                }
-                else if (errorData.message) {
-                    message = errorData.message;
-                }
-                else if (errorData.errorMessage) {
-                    message = errorData.errorMessage;
-                }
-            }
-            catch (e) {
-                console.warn("Could not parse JIRA error response body as JSON.");
-            }
-            const details = JSON.stringify(errorData, null, 2);
-            console.error("JIRA API Error Details:", details);
-            const errorMessage = message ? `: ${message}` : "";
-            throw new Error(`JIRA API Error${errorMessage} (Status: ${response.status})`);
-        }
-        throw new Error("Unknown error occurred during fetch operation.");
-    }
     async fetchJson(url, init) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
-        try {
-            const response = await fetch(url, {
-                ...init,
-                headers: {
-                    ...Object.fromEntries(this.headers.entries()),
-                    ...(init?.headers || {}),
-                },
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                await this.handleFetchError(response);
-            }
-            return await response.json();
-        }
-        catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(`Request timeout after ${this.requestTimeout}ms`);
-            }
-            throw error;
-        }
+        return (0, http_1.jiraFetchJson)(url, this.headers, init, this.requestTimeout);
     }
     async getBoards(projectKeyOrId, type, maxResults = 50) {
         const searchParams = new URLSearchParams();

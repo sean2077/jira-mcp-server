@@ -217,56 +217,12 @@ async function createAuthenticatedJiraService() {
     };
 }
 // Helper function to extract meaningful error messages
+// The SDK is fetch-based and throws plain Error objects (see jira-sdk/http.js), so there is no
+// axios error shape to unwrap here - just surface the message.
 const extractErrorMessage = (error) => {
-    // Handle Axios errors specifically
-    if (error.name === 'AxiosError' || error.isAxiosError) {
-        // Check if we have a response with error details
-        if (error.response?.data) {
-            const { status, data } = error.response;
-            // Extract the specific error message from API response
-            if (data.message) {
-                const errorCode = data.code ? ` (Code: ${data.code})` : '';
-                return `${data.message}${errorCode}`;
-            }
-            if (data.error) {
-                return data.error;
-            }
-            if (data.errors && Array.isArray(data.errors)) {
-                return data.errors.join(', ');
-            }
-            // If no specific message, use status-based message
-            switch (status) {
-                case 401:
-                    return 'Authentication failed. Please check your API credentials.';
-                case 403:
-                    return 'Access denied. Check your permissions for this resource.';
-                case 404:
-                    return 'Resource not found. Please verify the provided IDs.';
-                case 429:
-                    return 'Rate limit exceeded. Please try again later.';
-                case 500:
-                    return 'Internal server error. Please try again later.';
-                default:
-                    return `HTTP ${status}: ${JSON.stringify(data)}`;
-            }
-        }
-        // Handle Axios errors without response data
-        if (error.code) {
-            switch (error.code) {
-                case 'ERR_BAD_REQUEST':
-                    return 'Bad request. Please check your request parameters.';
-                case 'ECONNREFUSED':
-                    return 'Connection refused. Please check if the service is running.';
-                case 'ENOTFOUND':
-                    return 'Network error. Please check your internet connection.';
-                case 'ETIMEDOUT':
-                    return 'Request timeout. Please try again.';
-                default:
-                    return `Network error: ${error.code}`;
-            }
-        }
+    if (typeof error === 'string') {
+        return error;
     }
-    // Fallback for non-Axios errors
-    return error.message || 'An unexpected error occurred';
+    return error?.message || 'An unexpected error occurred';
 };
 exports.extractErrorMessage = extractErrorMessage;
